@@ -1,5 +1,4 @@
 {
-    "name": "luka/vbis2022201559",
     "autoload": {
         "psr-4": {
             "app\\": "./"
@@ -7,8 +6,8 @@
     },
     "authors": [
         {
-            "name": "lukatasic",
-            "email": "luka.tasic.22@singimail.rs"
+            "name": "luka-andrija"
+
         }
     ],
     "require": {
