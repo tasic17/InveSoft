@@ -37,7 +37,7 @@
                                     <p class="text-xs font-weight-bold mb-0"><?= $item['kategorija'] ?></p>
                                 </td>
                                 <td class="align-middle text-center">
-                                    <span class="text-secondary text-xs font-weight-bold"><?= number_format($item['cena'], 2) ?> RSD</span>
+                                    <span class="text-secondary text-xs font-weight-bold"><?= number_format($item['cena'], 2) ?> EUR</span>
                                 </td>
                                 <td class="align-middle text-center">
                                     <span class="text-secondary text-xs font-weight-bold"><?= $item['kolicina'] ?></span>
