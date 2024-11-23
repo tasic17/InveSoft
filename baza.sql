@@ -1,8 +1,8 @@
 -- --------------------------------------------------------
--- Host:                         localhost
--- Server version:               8.0.37 - MySQL Community Server - GPL
+-- Host:                         127.0.0.1
+-- Server version:               10.4.32-MariaDB - mariadb.org binary distribution
 -- Server OS:                    Win64
--- HeidiSQL Version:             12.4.0.6659
+-- HeidiSQL Version:             12.8.0.6908
 -- --------------------------------------------------------
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
@@ -16,13 +16,13 @@
 
 
 -- Dumping database structure for invesoft
-CREATE DATABASE IF NOT EXISTS `invesoft` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE IF NOT EXISTS `invesoft` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */;
 USE `invesoft`;
 
 -- Dumping structure for table invesoft.kategorije
 CREATE TABLE IF NOT EXISTS `kategorije` (
-                                            `kategorijaID` int unsigned NOT NULL AUTO_INCREMENT,
-                                            `naziv` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                            `kategorijaID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `naziv` varchar(255) NOT NULL,
     PRIMARY KEY (`kategorijaID`)
     ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -36,18 +36,18 @@ INSERT INTO `kategorije` (`kategorijaID`, `naziv`) VALUES
 
 -- Dumping structure for table invesoft.korisnici
 CREATE TABLE IF NOT EXISTS `korisnici` (
-                                           `korisnikID` int unsigned NOT NULL AUTO_INCREMENT,
-                                           `ime` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `prezime` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                           `korisnikID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `ime` varchar(64) NOT NULL,
+    `prezime` varchar(64) NOT NULL,
+    `email` varchar(255) NOT NULL,
+    `password` varchar(255) NOT NULL,
     PRIMARY KEY (`korisnikID`),
     UNIQUE KEY `uq_korisnici_email` (`email`)
-    ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnici: ~10 rows (approximately)
+-- Dumping data for table invesoft.korisnici: ~14 rows (approximately)
 INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VALUES
-                                                                                  (1, 'Milan', 'Jovanović', 'milan.jovanovic@invesoft.com', 'MilAn#123'),
+                                                                                  (1, 'Uros', 'Jovanović', 'uros.jovanovic@invesoft.com', 'MilAn#123'),
                                                                                   (2, 'Ana', 'Petrović', 'ana.petrovic@invesoft.com', 'AnaPet#456'),
                                                                                   (3, 'Marko', 'Nikolić', 'marko.nikolic@invesoft.com', 'MarkoN!789'),
                                                                                   (4, 'Ivana', 'Popović', 'ivana.popovic@invesoft.com', 'IvaPoP@321'),
@@ -56,21 +56,25 @@ INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VA
                                                                                   (7, 'Maja', 'Stojanović', 'maja.stojanovic@invesoft.com', 'MajA#112'),
                                                                                   (8, 'Nikola', 'Ilić', 'nikola.ilic@invesoft.com', 'NikILiC!344'),
                                                                                   (9, 'Dragana', 'Simić', 'dragana.simic@invesoft.com', 'DraSim@559'),
-                                                                                  (10, 'Aleksandar', 'Pavlović', 'aleksandar.pavlovic@invesoft.com', 'AleksaP&788');
+                                                                                  (10, 'Aleksandar', 'Pavlović', 'aleksandar.pavlovic@invesoft.com', 'AleksaP&788'),
+                                                                                  (12, 'New', 'User', 'andrija@gmail.com', '$2y$10$D17gxZ051CuprTsSkeRfs.8qld5rSv9Uv851mg7hyUN4KAPv.Kwfi'),
+                                                                                  (13, 'Goran', 'Suvacarev', 'goran@gmail.com', '$2y$10$bMosiRSZPlzxRCZyPPTyfujVOQH2rQ3KDlMCHAcWEc0xXNOMDAOQC'),
+                                                                                  (14, 'Luka', 'Tasic', 'admin@invesoft.com', '$2y$10$cG5JgWrQL/Y6F84yekvxAelXoFkxl9PssR/X1FI.PsfdJpv05rScS'),
+                                                                                  (15, 'Milos', 'Vidakovic', 'milos@gmail.com', '$2y$10$ieVASttBfxrKlvPO72hmCud8Ko.RZhORfHTgxLKY43q9ubbzWNW5W');
 
 -- Dumping structure for table invesoft.korisnik_role
 CREATE TABLE IF NOT EXISTS `korisnik_role` (
-                                               `korisnik_rolaID` int unsigned NOT NULL AUTO_INCREMENT,
-                                               `korisnikID` int unsigned NOT NULL,
-                                               `rolaID` int unsigned NOT NULL,
-                                               PRIMARY KEY (`korisnik_rolaID`),
+                                               `korisnik_rolaID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `korisnikID` int(10) unsigned NOT NULL,
+    `rolaID` int(10) unsigned NOT NULL,
+    PRIMARY KEY (`korisnik_rolaID`),
     KEY `fk_korisnik_role_korisnikID` (`korisnikID`),
     KEY `fk_korisnik_role_rolaID` (`rolaID`),
-    CONSTRAINT `fk_korisnik_role_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON DELETE RESTRICT ON UPDATE CASCADE
-    ) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    CONSTRAINT `fk_korisnik_role_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
+    CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON UPDATE CASCADE
+    ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnik_role: ~10 rows (approximately)
+-- Dumping data for table invesoft.korisnik_role: ~13 rows (approximately)
 INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
                                                                             (1, 1, 2),
                                                                             (2, 2, 2),
@@ -81,18 +85,22 @@ INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
                                                                             (7, 7, 2),
                                                                             (8, 8, 1),
                                                                             (9, 9, 2),
-                                                                            (10, 10, 1);
+                                                                            (10, 10, 1),
+                                                                            (12, 12, 2),
+                                                                            (13, 13, 2),
+                                                                            (14, 14, 1),
+                                                                            (15, 15, 2);
 
 -- Dumping structure for table invesoft.proizvodi
 CREATE TABLE IF NOT EXISTS `proizvodi` (
-                                           `proizvodID` int unsigned NOT NULL AUTO_INCREMENT,
-                                           `naziv` varchar(128) COLLATE utf8mb4_unicode_ci NOT NULL,
-    `opis` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                           `proizvodID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `naziv` varchar(128) NOT NULL,
+    `opis` varchar(255) NOT NULL,
     `cena` decimal(10,2) unsigned NOT NULL,
-    `kategorijaID` int unsigned NOT NULL,
+    `kategorijaID` int(10) unsigned NOT NULL,
     PRIMARY KEY (`proizvodID`),
     KEY `fk_proizvodi_kategorijaID` (`kategorijaID`),
-    CONSTRAINT `fk_proizvodi_kategorijaID` FOREIGN KEY (`kategorijaID`) REFERENCES `kategorije` (`kategorijaID`) ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT `fk_proizvodi_kategorijaID` FOREIGN KEY (`kategorijaID`) REFERENCES `kategorije` (`kategorijaID`) ON UPDATE CASCADE
     ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.proizvodi: ~50 rows (approximately)
@@ -150,25 +158,32 @@ INSERT INTO `proizvodi` (`proizvodID`, `naziv`, `opis`, `cena`, `kategorijaID`) 
 
 -- Dumping structure for table invesoft.promene_zaliha
 CREATE TABLE IF NOT EXISTS `promene_zaliha` (
-                                                `promenaID` int unsigned NOT NULL AUTO_INCREMENT,
-                                                `proizvodID` int unsigned NOT NULL,
-                                                `korisnikID` int unsigned NOT NULL,
-                                                `datum_promene` datetime NOT NULL,
-                                                `tip_promene` enum('Ulaz','Izlaz') COLLATE utf8mb4_unicode_ci NOT NULL,
-    `kolicina` int unsigned NOT NULL,
+                                                `promenaID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `proizvodID` int(10) unsigned NOT NULL,
+    `korisnikID` int(10) unsigned NOT NULL,
+    `datum_promene` datetime NOT NULL,
+    `tip_promene` enum('Ulaz','Izlaz') NOT NULL,
+    `kolicina` int(10) unsigned NOT NULL,
     PRIMARY KEY (`promenaID`),
     KEY `fk_promene_zaliha_proizvodID` (`proizvodID`),
     KEY `fk_promene_zaliha_korisnikID` (`korisnikID`),
-    CONSTRAINT `fk_promene_zaliha_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON DELETE RESTRICT ON UPDATE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    CONSTRAINT `fk_promene_zaliha_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
+    CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
+    ) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.promene_zaliha: ~0 rows (approximately)
+-- Dumping data for table invesoft.promene_zaliha: ~6 rows (approximately)
+INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_promene`, `tip_promene`, `kolicina`) VALUES
+                                                                                                                       (1, 1, 12, '2024-11-23 14:03:34', 'Ulaz', 1),
+                                                                                                                       (2, 2, 12, '2024-11-23 14:03:45', 'Izlaz', 0),
+                                                                                                                       (3, 2, 12, '2024-11-23 14:03:58', 'Izlaz', 2),
+                                                                                                                       (4, 1, 14, '2024-11-23 14:28:11', 'Izlaz', 1),
+                                                                                                                       (5, 1, 14, '2024-11-23 14:40:05', 'Ulaz', 10),
+                                                                                                                       (6, 2, 14, '2024-11-23 14:56:52', 'Ulaz', 100);
 
 -- Dumping structure for table invesoft.role
 CREATE TABLE IF NOT EXISTS `role` (
-                                      `rolaID` int unsigned NOT NULL AUTO_INCREMENT,
-                                      `ime` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
+                                      `rolaID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `ime` varchar(64) NOT NULL,
     PRIMARY KEY (`rolaID`)
     ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -179,18 +194,18 @@ INSERT INTO `role` (`rolaID`, `ime`) VALUES
 
 -- Dumping structure for table invesoft.zalihe
 CREATE TABLE IF NOT EXISTS `zalihe` (
-                                        `zalihaID` int unsigned NOT NULL AUTO_INCREMENT,
-                                        `proizvodID` int unsigned NOT NULL,
-                                        `kolicina` int unsigned NOT NULL,
-                                        PRIMARY KEY (`zalihaID`),
+                                        `zalihaID` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `proizvodID` int(10) unsigned NOT NULL,
+    `kolicina` int(10) unsigned NOT NULL,
+    PRIMARY KEY (`zalihaID`),
     KEY `fk_zalihe_proizvodID` (`proizvodID`),
-    CONSTRAINT `fk_zalihe_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT `fk_zalihe_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
     ) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.zalihe: ~50 rows (approximately)
 INSERT INTO `zalihe` (`zalihaID`, `proizvodID`, `kolicina`) VALUES
-                                                                (1, 1, 80),
-                                                                (2, 2, 11),
+                                                                (1, 1, 90),
+                                                                (2, 2, 110),
                                                                 (3, 3, 87),
                                                                 (4, 4, 84),
                                                                 (5, 5, 72),
