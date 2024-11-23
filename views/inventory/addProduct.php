@@ -36,13 +36,19 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-control-label">Cena</label>
-                        <input type="number" name="cena" class="form-control" step="0.01" required>
+                        <input type="number" name="cena" class="form-control" step="0.01" min="0" required>
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-control-label">Početna Količina</label>
-                        <input type="number" name="pocetna_kolicina" class="form-control" value="0" required>
+                        <input type="number"
+                               name="pocetna_kolicina"
+                               class="form-control"
+                               value="0"
+                               min="0"
+                               oninput="this.value = this.value < 0 ? 0 : Math.floor(this.value)"
+                               required>
                     </div>
                 </div>
             </div>

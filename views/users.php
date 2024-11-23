@@ -11,33 +11,38 @@
                 <thead>
                 <tr>
                     <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">User</th>
-                    <th class="text-secondary opacity-7"></th>
+                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Role</th>
+                    <th class="text-secondary opacity-7">Actions</th>
                 </tr>
                 </thead>
                 <tbody>
-                <?php
-
-                foreach ($params as $user) {
-                    echo "<tr>";
-                    echo "<td>";
-                    echo "<div class='d-flex px-2 py-1'>";
-                    echo "<div>";
-                    echo "<img src='../assets/img/team-2.jpg' class='avatar avatar-sm me-3' alt='user1'>";
-                    echo "</div>";
-                    echo "<div class='d-flex flex-column justify-content-center'>";
-                    echo "<h6 class='mb-0 text-sm'>$user[first_name] $user[last_name]</h6>";
-                    echo "<p class='text-xs text-secondary mb-0'>$user[email]</p>";
-                    echo "</div>";
-                    echo "</div>";
-                    echo " </td>";
-                    echo "<td class='align-middle'>";
-                    echo "<a href='/updateUser?id=$user[id]' target='_blank' class='text-secondary font-weight-bold text-xs' data-toggle='tooltip' data-original-title='Edit user'>";
-                    echo "Edit";
-                    echo "</a>";
-                    echo " </td>";
-                    echo "  </tr>";
-                }
-                ?>
+                <?php foreach ($params as $user): ?>
+                    <tr>
+                        <td>
+                            <div class="d-flex px-2 py-1">
+                                <div class="d-flex flex-column justify-content-center">
+                                    <h6 class="mb-0 text-sm"><?= $user['first_name'] ?> <?= $user['last_name'] ?></h6>
+                                    <p class="text-xs text-secondary mb-0"><?= $user['email'] ?></p>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <p class="text-xs font-weight-bold mb-0"><?= $user['role'] ?></p>
+                        </td>
+                        <td class="align-middle">
+                            <a href="/updateUser?id=<?= $user['id'] ?>" class="text-secondary font-weight-bold text-xs me-3">
+                                <i class="fas fa-edit me-1"></i> Edit
+                            </a>
+                            <?php if ($user['role'] !== 'Administrator'): ?>
+                                <a href="/deleteUser?id=<?= $user['id'] ?>"
+                                   class="text-danger font-weight-bold text-xs"
+                                   onclick="return confirm('Da li ste sigurni da želite da obrišete ovog korisnika?');">
+                                    <i class="fas fa-trash me-1"></i> Delete
+                                </a>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
                 </tbody>
             </table>
         </div>

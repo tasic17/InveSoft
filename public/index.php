@@ -27,6 +27,7 @@ $app->router->get("/updateUser", [UserController::class, 'updateUser']);
 $app->router->get("/createUser", [UserController::class, 'createUser']);
 $app->router->post("/processUpdateUser", [UserController::class, 'processUpdateUser']);
 $app->router->post("/processCreateUser", [UserController::class, 'processCreate']);
+$app->router->get("/deleteUser", [UserController::class, 'deleteUser']);
 
 // Inventory Routes
 $app->router->get("/inventory", [InventoryController::class, 'overview']);

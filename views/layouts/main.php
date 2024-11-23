@@ -1,10 +1,19 @@
 <?php
 use app\core\Application;
-?>
 
+$user = Application::$app->session->get('user');
+$isAdmin = false;
+if ($user) {
+    foreach ($user as $userData) {
+        if ($userData['role'] === 'Administrator') {
+            $isAdmin = true;
+            break;
+        }
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -42,16 +51,6 @@ use app\core\Application;
     <hr class="horizontal dark mt-0">
     <div class="collapse navbar-collapse w-auto" id="sidenav-collapse-main">
         <ul class="navbar-nav">
-            <!-- Dashboard -->
-            <li class="nav-item">
-                <a class="nav-link <?= $_SERVER['REQUEST_URI'] === '/' ? 'active' : '' ?>" href="/">
-                    <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
-                        <i class="ni ni-tv-2 text-dark text-sm opacity-10"></i>
-                    </div>
-                    <span class="nav-link-text ms-1">Dashboard</span>
-                </a>
-            </li>
-
             <!-- Inventory Management Section -->
             <li class="nav-item mt-3">
                 <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Inventory Management</h6>
@@ -81,11 +80,11 @@ use app\core\Application;
                 </a>
             </li>
 
-            <!-- User Management Section -->
-            <li class="nav-item mt-3">
-                <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">User Management</h6>
-            </li>
-            <?php if (Application::$app->session->get('user') && in_array('Administrator', array_column(Application::$app->session->get('user'), 'role'))): ?>
+            <?php if ($isAdmin): ?>
+                <!-- User Management Section -->
+                <li class="nav-item mt-3">
+                    <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">User Management</h6>
+                </li>
                 <li class="nav-item">
                     <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/users') ? 'active' : '' ?>" href="/users">
                         <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
@@ -100,7 +99,7 @@ use app\core\Application;
             <li class="nav-item mt-3">
                 <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Account</h6>
             </li>
-            <?php if (Application::$app->session->get('user')): ?>
+            <?php if ($user): ?>
                 <li class="nav-item">
                     <a class="nav-link" href="/processLogout">
                         <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
@@ -133,10 +132,10 @@ use app\core\Application;
                 <div class="ms-md-auto pe-md-3 d-flex align-items-center">
                 </div>
                 <ul class="navbar-nav justify-content-end">
-                    <?php if (Application::$app->session->get('user')): ?>
+                    <?php if ($user): ?>
                         <li class="nav-item px-3 d-flex align-items-center">
                                 <span class="text-white">
-                                    Welcome, <?= Application::$app->session->get('user')[0]['first_name'] ?? 'User' ?>
+                                    Welcome, <?= $user[0]['first_name'] ?? $user[0]['ime'] ?>
                                 </span>
                         </li>
                     <?php endif; ?>
@@ -173,5 +172,4 @@ use app\core\Application;
 Application::$app->session->showSuccessNotification();
 Application::$app->session->showErrorNotification();
 ?>
-
 </html>

@@ -15,7 +15,7 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-control-label">Tip Promene</label>
-                        <select name="tip_promene" class="form-control" required>
+                        <select name="tip_promene" class="form-control" required id="tipPromene">
                             <option value="Ulaz">Ulaz</option>
                             <option value="Izlaz">Izlaz</option>
                         </select>
@@ -24,10 +24,38 @@
                 <div class="col-md-6">
                     <div class="form-group">
                         <label class="form-control-label">Količina</label>
-                        <input type="number" name="kolicina" class="form-control" required>
+                        <input type="number"
+                               name="kolicina"
+                               class="form-control"
+                               min="0"
+                               oninput="this.value = this.value < 0 ? 0 : Math.floor(this.value)"
+                               required>
                     </div>
                 </div>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const kolicinaInput = form.querySelector('input[name="kolicina"]');
+        const tipPromeneSelect = document.getElementById('tipPromene');
+
+        // Add form submission handler
+        form.addEventListener('submit', function(e) {
+            const kolicina = parseInt(kolicinaInput.value);
+            if (kolicina < 0) {
+                e.preventDefault();
+                alert('Količina ne može biti negativna!');
+                return false;
+            }
+        });
+
+        // Add input validation
+        kolicinaInput.addEventListener('input', function() {
+            this.value = this.value < 0 ? 0 : Math.floor(this.value);
+        });
+    });
+</script>
