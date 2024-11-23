@@ -36,5 +36,7 @@ $app->router->post("/inventory/process-add-product", [InventoryController::class
 $app->router->get("/inventory/update-stock", [InventoryController::class, 'updateStock']);
 $app->router->post("/inventory/process-update-stock", [InventoryController::class, 'processUpdateStock']);
 $app->router->get("/inventory/history", [InventoryController::class, 'stockHistory']);
+$app->router->get("/inventory/stock-report", [InventoryController::class, 'stockReport']);
+
 
 $app->run();

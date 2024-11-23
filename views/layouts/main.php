@@ -36,6 +36,13 @@ if ($user) {
     <script src="../assets/libs/jquery/dist/jquery.min.js"></script>
     <script src="../assets/js/plugins/toastr/toastr.min.js"></script>
     <script src="../assets/js/plugins/toastr/toastr-options.js"></script>
+
+    <!-- React and Recharts for Stock Report -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body class="g-sidenav-show bg-gray-100">
@@ -56,23 +63,40 @@ if ($user) {
                 <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">Inventory Management</h6>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/inventory') && !str_contains($_SERVER['REQUEST_URI'], 'add-product') && !str_contains($_SERVER['REQUEST_URI'], 'history') ? 'active' : '' ?>" href="/inventory">
+                <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/inventory') && !str_contains($_SERVER['REQUEST_URI'], 'add-product') && !str_contains($_SERVER['REQUEST_URI'], 'history') && !str_contains($_SERVER['REQUEST_URI'], 'stock-report') ? 'active' : '' ?>"
+                   href="/inventory">
                     <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
                         <i class="ni ni-box-2 text-dark text-sm opacity-10"></i>
                     </div>
                     <span class="nav-link-text ms-1">Inventory Overview</span>
                 </a>
             </li>
+
+            <?php if ($isAdmin): ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], 'add-product') ? 'active' : '' ?>"
+                       href="/inventory/add-product">
+                        <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
+                            <i class="ni ni-fat-add text-dark text-sm opacity-10"></i>
+                        </div>
+                        <span class="nav-link-text ms-1">Add Product</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], 'stock-report') ? 'active' : '' ?>"
+                       href="/inventory/stock-report">
+                        <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
+                            <i class="ni ni-chart-bar-32 text-dark text-sm opacity-10"></i>
+                        </div>
+                        <span class="nav-link-text ms-1">Stock Report</span>
+                    </a>
+                </li>
+            <?php endif; ?>
+
             <li class="nav-item">
-                <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], 'add-product') ? 'active' : '' ?>" href="/inventory/add-product">
-                    <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
-                        <i class="ni ni-fat-add text-dark text-sm opacity-10"></i>
-                    </div>
-                    <span class="nav-link-text ms-1">Add Product</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], 'history') ? 'active' : '' ?>" href="/inventory/history">
+                <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], 'history') ? 'active' : '' ?>"
+                   href="/inventory/history">
                     <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
                         <i class="ni ni-time-alarm text-dark text-sm opacity-10"></i>
                     </div>
@@ -86,7 +110,8 @@ if ($user) {
                     <h6 class="ps-4 ms-2 text-uppercase text-xs font-weight-bolder opacity-6">User Management</h6>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/users') ? 'active' : '' ?>" href="/users">
+                    <a class="nav-link <?= str_contains($_SERVER['REQUEST_URI'], '/users') ? 'active' : '' ?>"
+                       href="/users">
                         <div class="icon icon-shape icon-sm border-radius-md text-center me-2 d-flex align-items-center justify-content-center">
                             <i class="ni ni-single-02 text-dark text-sm opacity-10"></i>
                         </div>
@@ -115,14 +140,19 @@ if ($user) {
 
 <main class="main-content position-relative border-radius-lg">
     <!-- Navbar -->
-    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl " id="navbarBlur" data-scroll="false">
+    <nav class="navbar navbar-main navbar-expand-lg px-0 mx-4 shadow-none border-radius-xl" id="navbarBlur" data-scroll="false">
         <div class="container-fluid py-1 px-3">
             <nav aria-label="breadcrumb">
                 <h6 class="font-weight-bolder text-white mb-0">
                     <?php
                     $path = $_SERVER['REQUEST_URI'];
                     if ($path === '/') echo 'Dashboard';
-                    elseif (str_contains($path, 'inventory')) echo 'Inventory Management';
+                    elseif (str_contains($path, 'inventory')) {
+                        if (str_contains($path, 'stock-report')) echo 'Stock Report';
+                        elseif (str_contains($path, 'history')) echo 'Stock History';
+                        elseif (str_contains($path, 'add-product')) echo 'Add Product';
+                        else echo 'Inventory Management';
+                    }
                     elseif (str_contains($path, 'users')) echo 'User Management';
                     else echo 'Invesoft System';
                     ?>
@@ -134,9 +164,9 @@ if ($user) {
                 <ul class="navbar-nav justify-content-end">
                     <?php if ($user): ?>
                         <li class="nav-item px-3 d-flex align-items-center">
-                                <span class="text-white">
-                                    Welcome, <?= $user[0]['first_name'] ?? $user[0]['ime'] ?>
-                                </span>
+                            <span class="text-white">
+                                Welcome, <?= $user[0]['first_name'] ?? $user[0]['ime'] ?>
+                            </span>
                         </li>
                     <?php endif; ?>
                 </ul>

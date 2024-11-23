@@ -77,6 +77,70 @@ class InventoryController extends BaseController {
         ]);
     }
 
+    public function stockReport() {
+        if (!$this->isAdmin()) {
+            Application::$app->session->set('errorNotification', 'Pristup nije dozvoljen!');
+            header("location:" . "/inventory");
+            exit;
+        }
+
+        $promenaModel = new PromenaZalihaModel();
+
+        // Get stock changes over time
+        $stockChangesQuery = "SELECT 
+        DATE(pz.datum_promene) as date,
+        p.naziv as product_name,
+        pz.tip_promene,
+        pz.kolicina,
+        k.naziv as category_name
+    FROM promene_zaliha pz
+    JOIN proizvodi p ON pz.proizvodID = p.proizvodID
+    JOIN kategorije k ON p.kategorijaID = k.kategorijaID
+    ORDER BY pz.datum_promene ASC";
+
+        $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
+
+        // Get current stock by category
+        $categoryStockQuery = "SELECT 
+        k.naziv as category_name,
+        SUM(z.kolicina) as total_quantity,
+        COUNT(p.proizvodID) as product_count
+    FROM kategorije k
+    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+    JOIN zalihe z ON p.proizvodID = z.proizvodID
+    GROUP BY k.kategorijaID, k.naziv";
+
+        $categoryStock = $promenaModel->executeQuery($categoryStockQuery);
+
+        // Get product distribution within categories
+        $productDistributionQuery = "SELECT 
+        k.naziv as category_name,
+        p.naziv as product_name,
+        z.kolicina as quantity
+    FROM kategorije k
+    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+    JOIN zalihe z ON p.proizvodID = z.proizvodID
+    ORDER BY k.naziv, p.naziv";
+
+        $productDistribution = $promenaModel->executeQuery($productDistributionQuery);
+
+        if (isset($_GET['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'stockChanges' => $stockChanges,
+                'categoryStock' => $categoryStock,
+                'productDistribution' => $productDistribution
+            ]);
+            exit;
+        }
+
+        $this->view->render('inventory/stockReport', 'main', [
+            'stockChanges' => $stockChanges,
+            'categoryStock' => $categoryStock,
+            'productDistribution' => $productDistribution
+        ]);
+    }
+
     public function addProduct() {
         if (!$this->isAdmin()) {
             Application::$app->session->set('errorNotification', 'Pristup nije dozvoljen!');
@@ -137,10 +201,22 @@ class InventoryController extends BaseController {
 
             // Create initial inventory record
             $zalihaModel->proizvodID = $proizvodID;
-            $zalihaModel->kolicina = (int)max(0, $_POST['pocetna_kolicina'] ?? 0); // Ensure non-negative
+            $zalihaModel->kolicina = (int)max(0, $_POST['pocetna_kolicina'] ?? 0);
 
             if (!$zalihaModel->insert()) {
                 throw new \Exception("Error inserting inventory: " . $zalihaModel->con->error);
+            }
+
+            // Record initial stock as a change
+            $promenaModel = new PromenaZalihaModel();
+            $promenaModel->proizvodID = $proizvodID;
+            $promenaModel->korisnikID = Application::$app->session->get('user')[0]['id'];
+            $promenaModel->datum_promene = date('Y-m-d H:i:s');
+            $promenaModel->tip_promene = 'Ulaz';
+            $promenaModel->kolicina = $zalihaModel->kolicina;
+
+            if (!$promenaModel->insert()) {
+                throw new \Exception("Error recording initial stock: " . $promenaModel->con->error);
             }
 
             // If everything is successful, commit the transaction
@@ -239,7 +315,7 @@ class InventoryController extends BaseController {
     public function stockHistory() {
         $promenaModel = new PromenaZalihaModel();
 
-        $query = "SELECT pz.*, p.naziv as proizvod, k.ime as korisnik, pz.datum_promene 
+        $query = "SELECT pz.*, p.naziv as proizvod, k.ime as korisnik 
                  FROM promene_zaliha pz
                  JOIN proizvodi p ON pz.proizvodID = p.proizvodID
                  JOIN korisnici k ON pz.korisnikID = k.korisnikID
