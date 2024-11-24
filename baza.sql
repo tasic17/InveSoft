@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS `korisnici` (
   `password` varchar(255) NOT NULL,
   PRIMARY KEY (`korisnikID`),
   UNIQUE KEY `uq_korisnici_email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.korisnici: ~14 rows (approximately)
 INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VALUES
@@ -72,9 +72,9 @@ CREATE TABLE IF NOT EXISTS `korisnik_role` (
   KEY `fk_korisnik_role_rolaID` (`rolaID`),
   CONSTRAINT `fk_korisnik_role_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
   CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnik_role: ~11 rows (approximately)
+-- Dumping data for table invesoft.korisnik_role: ~12 rows (approximately)
 INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
 	(2, 2, 2),
 	(3, 3, 2),
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS `promene_zaliha` (
   KEY `fk_promene_zaliha_korisnikID` (`korisnikID`),
   CONSTRAINT `fk_promene_zaliha_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
   CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.promene_zaliha: ~19 rows (approximately)
 INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_promene`, `tip_promene`, `kolicina`) VALUES
@@ -190,7 +190,10 @@ INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_pr
 	(20, 1, 19, '2024-11-24 22:55:04', 'Izlaz', 30),
 	(21, 1, 19, '2024-11-24 22:55:10', 'Ulaz', 50),
 	(22, 2, 15, '2024-11-24 22:58:42', 'Ulaz', 20),
-	(23, 8, 14, '2024-11-24 23:30:06', 'Ulaz', 100);
+	(23, 8, 14, '2024-11-24 23:30:06', 'Ulaz', 100),
+	(24, 1, 15, '2024-11-24 23:37:01', 'Ulaz', 30),
+	(25, 8, 15, '2024-11-24 23:37:06', 'Ulaz', 30),
+	(26, 7, 15, '2024-11-24 23:37:11', 'Ulaz', 30);
 
 -- Dumping structure for table invesoft.role
 CREATE TABLE IF NOT EXISTS `role` (
@@ -216,14 +219,14 @@ CREATE TABLE IF NOT EXISTS `zalihe` (
 
 -- Dumping data for table invesoft.zalihe: ~50 rows (approximately)
 INSERT INTO `zalihe` (`zalihaID`, `proizvodID`, `kolicina`) VALUES
-	(1, 1, 200),
+	(1, 1, 230),
 	(2, 2, 170),
 	(3, 3, 87),
 	(4, 4, 84),
 	(5, 5, 72),
 	(6, 6, 31),
-	(7, 7, 25),
-	(8, 8, 200),
+	(7, 7, 55),
+	(8, 8, 230),
 	(9, 9, 65),
 	(10, 10, 82),
 	(11, 11, 67),
