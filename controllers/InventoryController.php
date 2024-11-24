@@ -58,7 +58,6 @@ class InventoryController extends BaseController {
         $results = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
         if (isset($_GET['ajax'])) {
-            // If it's an AJAX request, return JSON
             header('Content-Type: application/json');
             echo json_encode([
                 'items' => $results,
@@ -68,7 +67,6 @@ class InventoryController extends BaseController {
             exit;
         }
 
-        // Regular page load
         $this->view->render('inventory/overview', 'main', [
             'items' => $results,
             'totalPages' => $totalPages,
@@ -88,39 +86,39 @@ class InventoryController extends BaseController {
 
         // Get stock changes over time
         $stockChangesQuery = "SELECT 
-        DATE(pz.datum_promene) as date,
-        p.naziv as product_name,
-        pz.tip_promene,
-        pz.kolicina,
-        k.naziv as category_name
-    FROM promene_zaliha pz
-    JOIN proizvodi p ON pz.proizvodID = p.proizvodID
-    JOIN kategorije k ON p.kategorijaID = k.kategorijaID
-    ORDER BY pz.datum_promene ASC";
+            DATE(pz.datum_promene) as date,
+            p.naziv as product_name,
+            pz.tip_promene,
+            pz.kolicina,
+            k.naziv as category_name
+        FROM promene_zaliha pz
+        JOIN proizvodi p ON pz.proizvodID = p.proizvodID
+        JOIN kategorije k ON p.kategorijaID = k.kategorijaID
+        ORDER BY pz.datum_promene ASC";
 
         $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
 
         // Get current stock by category
         $categoryStockQuery = "SELECT 
-        k.naziv as category_name,
-        SUM(z.kolicina) as total_quantity,
-        COUNT(p.proizvodID) as product_count
-    FROM kategorije k
-    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
-    JOIN zalihe z ON p.proizvodID = z.proizvodID
-    GROUP BY k.kategorijaID, k.naziv";
+            k.naziv as category_name,
+            SUM(z.kolicina) as total_quantity,
+            COUNT(p.proizvodID) as product_count
+        FROM kategorije k
+        JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+        JOIN zalihe z ON p.proizvodID = z.proizvodID
+        GROUP BY k.kategorijaID, k.naziv";
 
         $categoryStock = $promenaModel->executeQuery($categoryStockQuery);
 
         // Get product distribution within categories
         $productDistributionQuery = "SELECT 
-        k.naziv as category_name,
-        p.naziv as product_name,
-        z.kolicina as quantity
-    FROM kategorije k
-    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
-    JOIN zalihe z ON p.proizvodID = z.proizvodID
-    ORDER BY k.naziv, p.naziv";
+            k.naziv as category_name,
+            p.naziv as product_name,
+            z.kolicina as quantity
+        FROM kategorije k
+        JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+        JOIN zalihe z ON p.proizvodID = z.proizvodID
+        ORDER BY k.naziv, p.naziv";
 
         $productDistribution = $promenaModel->executeQuery($productDistributionQuery);
 
@@ -139,6 +137,141 @@ class InventoryController extends BaseController {
             'categoryStock' => $categoryStock,
             'productDistribution' => $productDistribution
         ]);
+    }
+
+    public function searchProducts() {
+        if (!isset($_GET['term'])) {
+            echo json_encode([]);
+            exit;
+        }
+
+        $term = $_GET['term'];
+        $proizvodModel = new ProizvodModel();
+
+        $query = "SELECT proizvodID, naziv 
+                 FROM proizvodi 
+                 WHERE naziv LIKE ? 
+                 ORDER BY naziv 
+                 LIMIT 10";
+
+        $stmt = $proizvodModel->con->prepare($query);
+        $searchTerm = "%$term%";
+        $stmt->bind_param("s", $searchTerm);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $products = [];
+        while ($row = $result->fetch_assoc()) {
+            $products[] = $row;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($products);
+        exit;
+    }
+
+    public function productHistory() {
+        if (!isset($_GET['id'])) {
+            echo json_encode(['error' => 'No product ID provided']);
+            exit;
+        }
+
+        $productId = $_GET['id'];
+        $promenaModel = new PromenaZalihaModel();
+
+        // Get current stock and first transaction date
+        $query = "SELECT 
+                z.kolicina as current_stock,
+                MIN(pz.datum_promene) as first_change_date
+            FROM zalihe z
+            LEFT JOIN promene_zaliha pz ON z.proizvodID = pz.proizvodID
+            WHERE z.proizvodID = ?";
+
+        $stmt = $promenaModel->con->prepare($query);
+        $stmt->bind_param("i", $productId);
+        $stmt->execute();
+        $initialInfo = $stmt->get_result()->fetch_assoc();
+
+        // Get all stock changes
+        $query = "SELECT 
+                DATE(datum_promene) as date,
+                tip_promene,
+                kolicina
+            FROM promene_zaliha
+            WHERE proizvodID = ?
+            ORDER BY datum_promene, promenaID";
+
+        $stmt = $promenaModel->con->prepare($query);
+        $stmt->bind_param("i", $productId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $dates = [];
+        $inflow = [];
+        $outflow = [];
+        $totalStock = [];
+
+        // Calculate initial stock by reversing all transactions
+        $allTransactions = [];
+        $runningTotal = $initialInfo['current_stock']; // Start with current stock
+
+        while ($row = $result->fetch_assoc()) {
+            $allTransactions[] = $row;
+            // Subtract the effect of each transaction to get to initial state
+            if ($row['tip_promene'] === 'Ulaz') {
+                $runningTotal -= (int)$row['kolicina'];
+            } else {
+                $runningTotal += (int)$row['kolicina'];
+            }
+        }
+
+        $initialStock = $runningTotal; // This is our starting point
+
+        // Add initial point before any changes
+        if ($initialInfo['first_change_date']) {
+            $firstChangeDate = date('Y-m-d', strtotime($initialInfo['first_change_date']));
+            $startDate = date('Y-m-d', strtotime($firstChangeDate . ' -1 day'));
+
+            $dates[] = $startDate;
+            $inflow[] = null;
+            $outflow[] = null;
+            $totalStock[] = $initialStock;
+        }
+
+        // Process all transactions
+        $runningTotal = $initialStock;
+        foreach ($allTransactions as $transaction) {
+            $dates[] = $transaction['date'];
+
+            if ($transaction['tip_promene'] === 'Ulaz') {
+                $inflow[] = (int)$transaction['kolicina'];
+                $outflow[] = null;
+                $runningTotal += (int)$transaction['kolicina'];
+            } else {
+                $inflow[] = null;
+                $outflow[] = (int)$transaction['kolicina'];
+                $runningTotal -= (int)$transaction['kolicina'];
+            }
+
+            $totalStock[] = $runningTotal;
+        }
+
+        // If there are no movements, just show current stock
+        if (empty($dates)) {
+            $dates[] = date('Y-m-d');
+            $inflow[] = null;
+            $outflow[] = null;
+            $totalStock[] = $initialInfo['current_stock'];
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'dates' => $dates,
+            'inflow' => $inflow,
+            'outflow' => $outflow,
+            'totalStock' => $totalStock
+        ]);
+        exit;
     }
 
     public function addProduct() {
@@ -245,7 +378,6 @@ class InventoryController extends BaseController {
 
         $this->view->render('inventory/updateStock', 'main', $proizvodModel);
     }
-
     public function processUpdateStock() {
         $promenaModel = new PromenaZalihaModel();
         $zalihaModel = new ZalihaModel();

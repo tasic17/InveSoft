@@ -47,41 +47,136 @@ foreach ($products as $product) {
 }
 ?>
 
+<style>
+    .report-header {
+        background: linear-gradient(to right, #2E93fA, #4556AC);
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        margin-bottom: 2rem;
+    }
+
+    .chart-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #344767;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #eee;
+    }
+
+    .search-container {
+        position: relative;
+        margin-bottom: 20px;
+    }
+
+    .search-results {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-height: 200px;
+        overflow-y: auto;
+        display: none;
+    }
+
+    .search-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+
+    .search-item:hover {
+        background: #f8f9fa;
+    }
+
+    .chart-wrapper {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+</style>
+
 <div class="row">
-    <div class="col-12 mb-4">
+    <div class="col-12">
         <div class="card">
             <div class="card-header pb-0">
-                <div class="d-flex align-items-center">
-                    <h6>Izveštaj o Zalihama</h6>
-                    <button onclick="refreshCharts()" class="btn btn-sm btn-primary ms-auto">
-                        <i class="fas fa-sync-alt me-2"></i>Osveži
-                    </button>
+                <div class="report-header">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h4 class="mb-0">Izveštaj o Zalihama</h4>
+                        <button onclick="refreshCharts()" class="btn btn-light btn-sm">
+                            <i class="fas fa-sync-alt me-2"></i>Osveži
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
-                <!-- Stock Changes Line Chart -->
-                <div class="chart-container" style="height: 400px; margin-bottom: 2rem;">
-                    <h6 class="text-center mb-3">Ukupne Zalihe kroz Vreme</h6>
-                    <canvas id="stockLineChart"></canvas>
+                <!-- Product Search Section -->
+                <div class="chart-wrapper">
+                    <div class="chart-title">Analiza Proizvoda</div>
+                    <div class="row">
+                        <div class="col-md-6 mx-auto">
+                            <div class="search-container">
+                                <input type="text"
+                                       id="productSearch"
+                                       class="form-control"
+                                       placeholder="Pretraži proizvod..."
+                                       autocomplete="off">
+                                <div id="searchResults" class="search-results"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="productChartContainer" class="chart-container" style="height: 400px; display: none;">
+                        <canvas id="productChart"></canvas>
+                    </div>
                 </div>
 
-                <!-- Main Category Distribution Pie Chart -->
-                <div class="chart-container" style="height: 400px; margin-bottom: 2rem;">
-                    <h6 class="text-center mb-3">Distribucija Zaliha po Kategorijama</h6>
-                    <canvas id="categoryPieChart"></canvas>
+                <!-- Stock Changes Line Chart -->
+                <div class="chart-wrapper">
+                    <div class="chart-title">Ukupne Zalihe kroz Vreme</div>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="stockLineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Main Category Distribution -->
+                <div class="chart-wrapper">
+                    <div class="chart-title">Distribucija Zaliha po Kategorijama</div>
+                    <div class="chart-container" style="height: 400px;">
+                        <canvas id="categoryPieChart"></canvas>
+                    </div>
                 </div>
 
                 <!-- Individual Category Charts -->
-                <h6 class="text-center mb-4">Distribucija Proizvoda po Kategorijama</h6>
-                <div class="row">
-                    <?php foreach ($productsByCategory as $categoryName => $data): ?>
-                        <div class="col-md-6 mb-4">
-                            <div class="chart-container" style="height: 300px;">
-                                <h6 class="text-center mb-3"><?= htmlspecialchars($categoryName) ?></h6>
-                                <canvas id="categoryChart_<?= md5($categoryName) ?>"></canvas>
+                <div class="chart-wrapper">
+                    <div class="chart-title">Distribucija Proizvoda po Kategorijama</div>
+                    <div class="row">
+                        <?php foreach ($productsByCategory as $categoryName => $data): ?>
+                            <div class="col-md-6 mb-4">
+                                <div class="chart-container" style="height: 300px;">
+                                    <div class="chart-title"><?= htmlspecialchars($categoryName) ?></div>
+                                    <canvas id="categoryChart_<?= md5($categoryName) ?>"></canvas>
+                                </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -238,7 +333,125 @@ foreach ($products as $product) {
     });
     <?php endforeach; ?>
 
-    // Function to refresh all charts
+    // Product Search and Chart
+    let productChart = null;
+    let searchTimeout = null;
+
+    document.getElementById('productSearch').addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const searchTerm = e.target.value;
+
+        if (searchTerm.length < 2) {
+            document.getElementById('searchResults').style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/inventory/search-products?term=${encodeURIComponent(searchTerm)}`)
+                .then(response => response.json())
+                .then(products => {
+                    const resultsDiv = document.getElementById('searchResults');
+                    resultsDiv.innerHTML = '';
+
+                    products.forEach(product => {
+                        const div = document.createElement('div');
+                        div.className = 'search-item';
+                        div.textContent = product.naziv;
+                        div.onclick = () => selectProduct(product.proizvodID, product.naziv);
+                        resultsDiv.appendChild(div);
+                    });
+
+                    resultsDiv.style.display = products.length ? 'block' : 'none';
+                });
+        }, 300);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('searchResults').style.display = 'none';
+        }
+    });
+
+    function selectProduct(productId, productName) {
+        document.getElementById('searchResults').style.display = 'none';
+        document.getElementById('productSearch').value = productName;
+
+        fetch(`/inventory/product-history?id=${productId}`)
+            .then(response => response.json())
+            .then(data => {
+                const chartContainer = document.getElementById('productChartContainer');
+                chartContainer.style.display = 'block';
+
+                if (productChart) {
+                    productChart.destroy();
+                }
+
+                const ctx = document.getElementById('productChart').getContext('2d');
+                productChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.dates,
+                        datasets: [{
+                            label: 'Ulaz',
+                            data: data.inflow,
+                            borderColor: '#66DA26',
+                            backgroundColor: '#66DA26',
+                            type: 'bar'
+                        }, {
+                            label: 'Izlaz',
+                            data: data.outflow,
+                            borderColor: '#E91E63',
+                            backgroundColor: '#E91E63',
+                            type: 'bar'
+                        }, {
+                            label: 'Ukupno Stanje',
+                            data: data.totalStock,
+                            borderColor: '#2E93fA',
+                            backgroundColor: 'rgba(46, 147, 250, 0.1)',
+                            type: 'line',
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                titleColor: '#000',
+                                bodyColor: '#000',
+                                borderColor: '#ddd',
+                                borderWidth: 1,
+                                padding: 10
+                            },
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Količina'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Datum'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+    }
+
+    // Function to refresh charts
     function refreshCharts() {
         fetch('/inventory/stock-report?ajax=1')
             .then(response => response.json())
@@ -267,12 +480,14 @@ foreach ($products as $product) {
                 categoryPieChart.data.datasets[0].data = data.categoryStock.map(item => item.total_quantity);
                 categoryPieChart.update();
 
-                // Refresh the page to update individual category charts
-                // This is a simple solution - for a more sophisticated approach,
-                // you would need to modify the controller to return product distribution data
+                // Reload the page to update individual category charts
+                // This ensures all category charts are properly updated with new data
                 window.location.reload();
             })
-            .catch(error => console.error('Error:', error));
+            .catch(error => {
+                console.error('Error refreshing charts:', error);
+                toastr.error('Došlo je do greške prilikom osvežavanja podataka.');
+            });
     }
 
     // Auto refresh every 5 minutes
