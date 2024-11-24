@@ -25,6 +25,26 @@ class UserController extends BaseController {
         }
 
         $userModel = new UserModel();
+
+        // First check if the target user is an administrator
+        $checkQuery = "SELECT r.ime as role 
+                      FROM korisnici k
+                      JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
+                      JOIN role r ON kr.rolaID = r.rolaID
+                      WHERE k.korisnikID = " . $_GET['id'];
+
+        $result = $userModel->executeQuery($checkQuery);
+
+        // Check if target user is an Administrator
+        foreach ($result as $row) {
+            if ($row['role'] === 'Administrator') {
+                Application::$app->session->set('errorNotification', 'Nije moguće menjati podatke drugih administratora!');
+                header("location:" . "/users");
+                exit;
+            }
+        }
+
+        // If we get here, the target user is not an administrator, proceed with loading their data
         $query = "SELECT k.korisnikID as id, k.ime as first_name, k.prezime as last_name, k.email 
                  FROM korisnici k 
                  WHERE k.korisnikID = " . $_GET['id'];
@@ -35,7 +55,26 @@ class UserController extends BaseController {
             $userModel->mapData($result[0]);
         }
 
-        $this->view->render('updateUser', 'main', $userModel);
+        // Get all roles
+        $roleQuery = "SELECT rolaID, ime FROM role";
+        $roles = $userModel->executeQuery($roleQuery);
+
+        // Get user's current role
+        $userRoleQuery = "SELECT r.rolaID, r.ime 
+                         FROM korisnici k
+                         JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
+                         JOIN role r ON kr.rolaID = r.rolaID
+                         WHERE k.korisnikID = " . $_GET['id'];
+        $userRole = $userModel->executeQuery($userRoleQuery)[0] ?? null;
+
+        $viewData = [
+            'model' => $userModel,
+            'roles' => $roles,
+            'userRole' => $userRole,
+            'isAdmin' => $this->isAdmin()
+        ];
+
+        $this->view->render('updateUser', 'main', $viewData);
     }
 
     public function createUser() {
@@ -104,37 +143,137 @@ class UserController extends BaseController {
 
     public function processUpdateUser() {
         $userModel = new UserModel();
-        $userModel->mapData($_POST);
-        $userModel->validate();
 
-        if ($userModel->errors) {
-            Application::$app->session->set('errorNotification', 'Greška pri ažuriranju korisnika!');
-            $this->view->render('updateUser', 'main', $userModel);
-            exit;
+        $formData = [
+            'id' => $_POST['id'] ?? null,
+            'first_name' => $_POST['first_name'] ?? '',
+            'last_name' => $_POST['last_name'] ?? '',
+            'email' => $_POST['email'] ?? ''
+        ];
+
+        // Check if target user is an administrator before processing the update
+        $checkQuery = "SELECT r.ime as role 
+                      FROM korisnici k
+                      JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
+                      JOIN role r ON kr.rolaID = r.rolaID
+                      WHERE k.korisnikID = ?";
+
+        $stmt = $userModel->con->prepare($checkQuery);
+        $stmt->bind_param("i", $formData['id']);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            if ($row['role'] === 'Administrator') {
+                Application::$app->session->set('errorNotification', 'Nije moguće menjati podatke drugih administratora!');
+                header("location:" . "/users");
+                exit;
+            }
         }
 
-        $query = "UPDATE korisnici SET 
-                 ime = ?, 
-                 prezime = ?, 
-                 email = ? 
-                 WHERE korisnikID = ?";
+        $userModel->mapData($formData);
 
-        $stmt = $userModel->con->prepare($query);
-        $stmt->bind_param("sssi",
-            $userModel->first_name,
-            $userModel->last_name,
-            $userModel->email,
-            $userModel->id
-        );
+        if (!$userModel->validate()) {
+            // Get roles for the form
+            $roleQuery = "SELECT rolaID, ime FROM role";
+            $roles = $userModel->executeQuery($roleQuery);
 
-        if (!$stmt->execute()) {
-            Application::$app->session->set('errorNotification', 'Greška pri ažuriranju korisnika: ' . $userModel->con->error);
-            $this->view->render('updateUser', 'main', $userModel);
-            exit;
+            $userRoleQuery = "SELECT r.rolaID, r.ime 
+                             FROM korisnici k
+                             JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
+                             JOIN role r ON kr.rolaID = r.rolaID
+                             WHERE k.korisnikID = " . $formData['id'];
+            $currentRole = $userModel->executeQuery($userRoleQuery)[0] ?? null;
+
+            $viewData = [
+                'model' => $userModel,
+                'roles' => $roles,
+                'userRole' => $currentRole,
+                'isAdmin' => $this->isAdmin()
+            ];
+
+            Application::$app->session->set('errorNotification', 'Molimo popunite sva obavezna polja ispravno.');
+            $this->view->render('updateUser', 'main', $viewData);
+            return;
         }
 
-        Application::$app->session->set('successNotification', 'Korisnik uspešno ažuriran!');
-        header("location:" . "/users");
+        // Start transaction
+        $userModel->con->begin_transaction();
+
+        try {
+            $query = "UPDATE korisnici SET 
+                     ime = ?, 
+                     prezime = ?, 
+                     email = ? 
+                     WHERE korisnikID = ?";
+
+            $stmt = $userModel->con->prepare($query);
+            $stmt->bind_param("sssi",
+                $userModel->first_name,
+                $userModel->last_name,
+                $userModel->email,
+                $userModel->id
+            );
+
+            if (!$stmt->execute()) {
+                throw new \Exception($userModel->con->error);
+            }
+
+            // Update role if admin and role was changed
+            $newRole = $_POST['role'] ?? null;
+            if ($this->isAdmin() && $newRole) {
+                $updateRoleQuery = "UPDATE korisnik_role SET rolaID = ? WHERE korisnikID = ?";
+                $roleStmt = $userModel->con->prepare($updateRoleQuery);
+                $roleStmt->bind_param("ii", $newRole, $userModel->id);
+
+                if (!$roleStmt->execute()) {
+                    throw new \Exception($userModel->con->error);
+                }
+            }
+
+            $userModel->con->commit();
+            Application::$app->session->set('successNotification', 'Korisnik je uspešno ažuriran!');
+            header("location:" . "/users");
+            exit;
+
+        } catch (\Exception $e) {
+            $userModel->con->rollback();
+
+            $roleQuery = "SELECT rolaID, ime FROM role";
+            $roles = $userModel->executeQuery($roleQuery);
+
+            $userRoleQuery = "SELECT r.rolaID, r.ime 
+                             FROM korisnici k
+                             JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
+                             JOIN role r ON kr.rolaID = r.rolaID
+                             WHERE k.korisnikID = " . $formData['id'];
+            $currentRole = $userModel->executeQuery($userRoleQuery)[0] ?? null;
+
+            $viewData = [
+                'model' => $userModel,
+                'roles' => $roles,
+                'userRole' => $currentRole,
+                'isAdmin' => $this->isAdmin()
+            ];
+
+            Application::$app->session->set('errorNotification', 'Greška pri ažuriranju: ' . $e->getMessage());
+            $this->view->render('updateUser', 'main', $viewData);
+        }
+    }
+
+    private function isAdmin(): bool {
+        $user = Application::$app->session->get('user');
+        if (!$user) {
+            return false;
+        }
+
+        foreach ($user as $userData) {
+            if ($userData['role'] === 'Administrator') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function processCreate() {

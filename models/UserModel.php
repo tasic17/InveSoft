@@ -21,32 +21,41 @@ class UserModel extends BaseModel {
     }
 
     public function editColumns(): array {
-        return ['ime', 'prezime', 'email', 'password'];
+        return ['ime', 'prezime', 'email'];
     }
 
     public function validationRules(): array {
+        // For update, we only need these fields
         return [
             'first_name' => [self::RULE_REQUIRED],
             'last_name' => [self::RULE_REQUIRED],
-            'email' => [self::RULE_REQUIRED, self::RULE_EMAIL],
-            'password' => [self::RULE_REQUIRED],
-            'confirm_password' => [self::RULE_REQUIRED]
+            'email' => [self::RULE_REQUIRED, self::RULE_EMAIL]
         ];
     }
 
     public function validate() {
-        parent::validate();
+        $this->errors = []; // Reset errors
 
-        // Additional password validation
-        if (!empty($this->password) && !empty($this->confirm_password)) {
-            if ($this->password !== $this->confirm_password) {
-                $this->errors['confirm_password'][] = "Passwords do not match";
-            }
+        foreach ($this->validationRules() as $attribute => $rules) {
+            $value = $this->{$attribute};
 
-            // Add password strength validation if needed
-            if (strlen($this->password) < 6) {
-                $this->errors['password'][] = "Password must be at least 6 characters long";
+            foreach ($rules as $rule) {
+                switch ($rule) {
+                    case self::RULE_REQUIRED:
+                        if (empty($value)) {
+                            $this->errors[$attribute][] = "{$attribute} je obavezno polje.";
+                        }
+                        break;
+
+                    case self::RULE_EMAIL:
+                        if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                            $this->errors[$attribute][] = "Email adresa nije ispravna.";
+                        }
+                        break;
+                }
             }
         }
+
+        return empty($this->errors);
     }
 }

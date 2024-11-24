@@ -113,7 +113,25 @@ foreach ($products as $product) {
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
+<?php
+foreach ($productsByCategory as $categoryName => &$data) {
+// Create combined array for sorting
+$combined = array_map(function($label, $value) {
+return ['label' => $label, 'value' => $value];
+}, $data['labels'], $data['data']);
 
+// Sort by value (quantity) in descending order
+usort($combined, function($a, $b) {
+return $b['value'] - $a['value'];
+});
+
+// Separate back into labels and data
+$data['labels'] = array_column($combined, 'label');
+$data['data'] = array_column($combined, 'value');
+}
+unset($data); // unset reference
+
+?>
 <div class="row">
     <div class="col-12">
         <div class="card">

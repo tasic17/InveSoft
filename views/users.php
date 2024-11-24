@@ -30,10 +30,10 @@
                             <p class="text-xs font-weight-bold mb-0"><?= $user['role'] ?></p>
                         </td>
                         <td class="align-middle">
-                            <a href="/updateUser?id=<?= $user['id'] ?>" class="text-secondary font-weight-bold text-xs me-3">
-                                <i class="fas fa-edit me-1"></i> Edit
-                            </a>
                             <?php if ($user['role'] !== 'Administrator'): ?>
+                                <a href="/updateUser?id=<?= $user['id'] ?>" class="text-secondary font-weight-bold text-xs me-3">
+                                    <i class="fas fa-edit me-1"></i> Edit
+                                </a>
                                 <a href="/deleteUser?id=<?= $user['id'] ?>"
                                    class="text-danger font-weight-bold text-xs"
                                    onclick="return confirm('Da li ste sigurni da želite da obrišete ovog korisnika?');">
