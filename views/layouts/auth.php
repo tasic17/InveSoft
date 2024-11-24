@@ -13,7 +13,7 @@ use app\core\Application;
     <link rel="apple-touch-icon" sizes="76x76" href="../assets/img/apple-icon.png">
     <link rel="icon" type="image/png" href="../assets/img/favicon.png">
     <title>
-        Argon Dashboard 3 by Creative Tim
+        InveSoft
     </title>
     <!--     Fonts and icons     -->
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet"/>
@@ -38,7 +38,7 @@ use app\core\Application;
             <nav class="navbar navbar-expand-lg blur border-radius-lg top-0 z-index-3 shadow position-absolute mt-4 py-2 start-0 end-0 mx-4">
                 <div class="container-fluid">
                     <a class="navbar-brand font-weight-bolder ms-lg-0 ms-3 " href="/login">
-                        VBIS 2024
+                        InveSoft
                     </a>
                     <button class="navbar-toggler shadow-none ms-2" type="button" data-bs-toggle="collapse"
                             data-bs-target="#navigation" aria-controls="navigation" aria-expanded="false"
@@ -95,10 +95,8 @@ use app\core\Application;
                              style="background-image: url('https://raw.githubusercontent.com/creativetimofficial/public-assets/master/argon-dashboard-pro/assets/img/signin-ill.jpg');
           background-size: cover;">
                             <span class="mask bg-gradient-primary opacity-6"></span>
-                            <h4 class="mt-5 text-white font-weight-bolder position-relative">"Attention is the new
-                                currency"</h4>
-                            <p class="text-white position-relative">The more effortless the writing looks, the more
-                                effort the writer actually put into the process.</p>
+                            <h4 class="mt-5 text-white font-weight-bolder position-relative">"The best inventory management system"</h4>
+                            <p class="text-white position-relative">Once you try our inventory system you're not going back.</p>
                         </div>
                     </div>
                 </div>
