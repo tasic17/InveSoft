@@ -86,41 +86,74 @@ class InventoryController extends BaseController {
 
         // Get stock changes over time
         $stockChangesQuery = "SELECT 
-            DATE(pz.datum_promene) as date,
-            p.naziv as product_name,
-            pz.tip_promene,
-            pz.kolicina,
-            k.naziv as category_name
-        FROM promene_zaliha pz
-        JOIN proizvodi p ON pz.proizvodID = p.proizvodID
-        JOIN kategorije k ON p.kategorijaID = k.kategorijaID
-        ORDER BY pz.datum_promene ASC";
+        DATE(pz.datum_promene) as date,
+        p.naziv as product_name,
+        pz.tip_promene,
+        pz.kolicina,
+        k.naziv as category_name
+    FROM promene_zaliha pz
+    JOIN proizvodi p ON pz.proizvodID = p.proizvodID
+    JOIN kategorije k ON p.kategorijaID = k.kategorijaID
+    ORDER BY pz.datum_promene ASC";
 
         $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
 
         // Get current stock by category
         $categoryStockQuery = "SELECT 
-            k.naziv as category_name,
-            SUM(z.kolicina) as total_quantity,
-            COUNT(p.proizvodID) as product_count
-        FROM kategorije k
-        JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
-        JOIN zalihe z ON p.proizvodID = z.proizvodID
-        GROUP BY k.kategorijaID, k.naziv";
+        k.naziv as category_name,
+        SUM(z.kolicina) as total_quantity,
+        COUNT(p.proizvodID) as product_count
+    FROM kategorije k
+    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+    JOIN zalihe z ON p.proizvodID = z.proizvodID
+    GROUP BY k.kategorijaID, k.naziv
+    ORDER BY total_quantity DESC";  // Added ORDER BY for sorting
 
         $categoryStock = $promenaModel->executeQuery($categoryStockQuery);
 
         // Get product distribution within categories
         $productDistributionQuery = "SELECT 
-            k.naziv as category_name,
-            p.naziv as product_name,
-            z.kolicina as quantity
-        FROM kategorije k
-        JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
-        JOIN zalihe z ON p.proizvodID = z.proizvodID
-        ORDER BY k.naziv, p.naziv";
+        k.naziv as category_name,
+        p.naziv as product_name,
+        z.kolicina as quantity
+    FROM kategorije k
+    JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
+    JOIN zalihe z ON p.proizvodID = z.proizvodID
+    ORDER BY k.naziv, z.kolicina DESC";  // Modified ORDER BY to sort by quantity
 
         $productDistribution = $promenaModel->executeQuery($productDistributionQuery);
+
+        // Process data for charts
+        $productsByCategory = [];
+        foreach ($productDistribution as $product) {
+            $categoryName = $product['category_name'];
+            if (!isset($productsByCategory[$categoryName])) {
+                $productsByCategory[$categoryName] = [
+                    'labels' => [],
+                    'data' => []
+                ];
+            }
+            $productsByCategory[$categoryName]['labels'][] = $product['product_name'];
+            $productsByCategory[$categoryName]['data'][] = intval($product['quantity']);
+        }
+
+        // Sort each category's data by quantity
+        foreach ($productsByCategory as &$category) {
+            // Create combined array for sorting
+            $combined = array_map(function($label, $value) {
+                return ['label' => $label, 'value' => $value];
+            }, $category['labels'], $category['data']);
+
+            // Sort by value (quantity) in descending order
+            usort($combined, function($a, $b) {
+                return $b['value'] - $a['value'];
+            });
+
+            // Separate back into labels and data
+            $category['labels'] = array_column($combined, 'label');
+            $category['data'] = array_column($combined, 'value');
+        }
+        unset($category); // unset reference
 
         if (isset($_GET['ajax'])) {
             header('Content-Type: application/json');
@@ -135,7 +168,7 @@ class InventoryController extends BaseController {
         $this->view->render('inventory/stockReport', 'main', [
             'stockChanges' => $stockChanges,
             'categoryStock' => $categoryStock,
-            'productDistribution' => $productDistribution
+            'productsByCategory' => $productsByCategory
         ]);
     }
 

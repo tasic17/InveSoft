@@ -2,8 +2,9 @@
 // views/inventory/stockReport.php
 $stockChanges = $params['stockChanges'];
 $categoryStock = $params['categoryStock'];
+$productsByCategory = $params['productsByCategory'];
 
-// Process stock changes data
+// Process stock changes data for the line chart
 $stockData = [];
 $runningTotal = 0;
 foreach ($stockChanges as $change) {
@@ -16,35 +17,6 @@ foreach ($stockChanges as $change) {
     $stockData[$date] = $runningTotal;
 }
 ksort($stockData);
-
-// Process category data
-$categoryLabels = array_column($categoryStock, 'category_name');
-$categoryValues = array_column($categoryStock, 'total_quantity');
-
-// Get product distribution within each category
-$productsByCategory = [];
-$query = "SELECT 
-            k.naziv as category_name,
-            p.naziv as product_name,
-            z.kolicina as quantity
-          FROM kategorije k
-          JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
-          JOIN zalihe z ON p.proizvodID = z.proizvodID
-          ORDER BY k.naziv, p.naziv";
-$promenaModel = new app\models\PromenaZalihaModel();
-$products = $promenaModel->executeQuery($query);
-
-foreach ($products as $product) {
-    $categoryName = $product['category_name'];
-    if (!isset($productsByCategory[$categoryName])) {
-        $productsByCategory[$categoryName] = [
-            'labels' => [],
-            'data' => []
-        ];
-    }
-    $productsByCategory[$categoryName]['labels'][] = $product['product_name'];
-    $productsByCategory[$categoryName]['data'][] = intval($product['quantity']);
-}
 ?>
 
 <style>
@@ -113,25 +85,7 @@ foreach ($products as $product) {
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 </style>
-<?php
-foreach ($productsByCategory as $categoryName => &$data) {
-// Create combined array for sorting
-$combined = array_map(function($label, $value) {
-return ['label' => $label, 'value' => $value];
-}, $data['labels'], $data['data']);
 
-// Sort by value (quantity) in descending order
-usort($combined, function($a, $b) {
-return $b['value'] - $a['value'];
-});
-
-// Separate back into labels and data
-$data['labels'] = array_column($combined, 'label');
-$data['data'] = array_column($combined, 'value');
-}
-unset($data); // unset reference
-
-?>
 <div class="row">
     <div class="col-12">
         <div class="card">
@@ -265,13 +219,27 @@ unset($data); // unset reference
 
     // Main Category Pie Chart
     const pieCtx = document.getElementById('categoryPieChart').getContext('2d');
+    const categoryData = <?= json_encode($categoryStock) ?>;
+
+    // Sort the data by total_quantity in descending order
+    categoryData.sort((a, b) => parseInt(b.total_quantity) - parseInt(a.total_quantity));
+
+    // Calculate total for percentages
+    const totalQuantity = categoryData.reduce((sum, item) => sum + parseInt(item.total_quantity), 0);
+
+    // Add percentage to labels
+    const categoryLabels = categoryData.map(item => {
+        const percentage = ((parseInt(item.total_quantity) / totalQuantity) * 100).toFixed(1);
+        return `${item.category_name} (${percentage}%)`;
+    });
+
     const categoryPieChart = new Chart(pieCtx, {
         type: 'pie',
         data: {
-            labels: <?= json_encode($categoryLabels) ?>,
+            labels: categoryLabels,
             datasets: [{
-                data: <?= json_encode($categoryValues) ?>,
-                backgroundColor: COLORS.slice(0, <?= count($categoryLabels) ?>),
+                data: categoryData.map(item => item.total_quantity),
+                backgroundColor: COLORS.slice(0, categoryData.length),
                 borderWidth: 1,
                 borderColor: '#fff'
             }]
@@ -289,7 +257,10 @@ unset($data); // unset reference
                     padding: 10,
                     callbacks: {
                         label: function(context) {
-                            return `Količina: ${context.parsed}`;
+                            const value = context.raw;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((value / total) * 100).toFixed(1);
+                            return `Količina: ${value.toLocaleString()}`;
                         }
                     }
                 },
@@ -297,7 +268,28 @@ unset($data); // unset reference
                     position: 'right',
                     labels: {
                         boxWidth: 15,
-                        padding: 15
+                        padding: 15,
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                const dataset = data.datasets[0];
+                                const total = dataset.data.reduce((a, b) => a + b, 0);
+
+                                return data.labels.map((label, i) => {
+                                    const value = dataset.data[i];
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return {
+                                        text: `${label}`,
+                                        fillStyle: dataset.backgroundColor[i],
+                                        strokeStyle: dataset.borderColor,
+                                        lineWidth: dataset.borderWidth,
+                                        hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i].hidden,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
                     }
                 }
             }

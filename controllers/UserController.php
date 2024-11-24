@@ -6,9 +6,32 @@ use app\core\BaseController;
 use app\models\UserModel;
 
 class UserController extends BaseController {
+    private function getStockActivityDetails(int $userId): array {
+        $userModel = new UserModel();
+        $query = "SELECT pz.*, p.naziv as proizvod
+                 FROM promene_zaliha pz
+                 JOIN proizvodi p ON pz.proizvodID = p.proizvodID
+                 WHERE pz.korisnikID = ?
+                 ORDER BY pz.datum_promene DESC";
+
+        $stmt = $userModel->con->prepare($query);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        $activities = [];
+        while ($row = $result->fetch_assoc()) {
+            $activities[] = $row;
+        }
+
+        return $activities;
+    }
+
     public function readAll() {
         $userModel = new UserModel();
-        $query = "SELECT k.korisnikID as id, k.ime as first_name, k.prezime as last_name, k.email, r.ime as role 
+        $query = "SELECT k.korisnikID as id, k.ime as first_name, k.prezime as last_name, k.email, r.ime as role,
+                        (SELECT COUNT(*) FROM promene_zaliha pz WHERE pz.korisnikID = k.korisnikID) as stock_changes,
+                        (SELECT MAX(datum_promene) FROM promene_zaliha pz WHERE pz.korisnikID = k.korisnikID) as last_activity
                  FROM korisnici k
                  JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
                  JOIN role r ON kr.rolaID = r.rolaID
@@ -24,36 +47,51 @@ class UserController extends BaseController {
             exit;
         }
 
+        $userId = $_GET['id'];
         $userModel = new UserModel();
 
-        // First check if the target user is an administrator
+        // Check if target user is an administrator
         $checkQuery = "SELECT r.ime as role 
                       FROM korisnici k
                       JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
                       JOIN role r ON kr.rolaID = r.rolaID
-                      WHERE k.korisnikID = " . $_GET['id'];
+                      WHERE k.korisnikID = ?";
 
-        $result = $userModel->executeQuery($checkQuery);
+        $stmt = $userModel->con->prepare($checkQuery);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        // Check if target user is an Administrator
-        foreach ($result as $row) {
+        $isTargetAdmin = false;
+        while ($row = $result->fetch_assoc()) {
             if ($row['role'] === 'Administrator') {
-                Application::$app->session->set('errorNotification', 'Nije moguće menjati podatke drugih administratora!');
-                header("location:" . "/users");
-                exit;
+                $isTargetAdmin = true;
+                break;
             }
         }
 
-        // If we get here, the target user is not an administrator, proceed with loading their data
+        if ($isTargetAdmin && !$this->isAdmin()) {
+            Application::$app->session->set('errorNotification', 'Nije moguće menjati podatke administratora!');
+            header("location:" . "/users");
+            exit;
+        }
+
+        // Get user data
         $query = "SELECT k.korisnikID as id, k.ime as first_name, k.prezime as last_name, k.email 
                  FROM korisnici k 
-                 WHERE k.korisnikID = " . $_GET['id'];
+                 WHERE k.korisnikID = ?";
 
-        $result = $userModel->executeQuery($query);
+        $stmt = $userModel->con->prepare($query);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
-        if (!empty($result)) {
-            $userModel->mapData($result[0]);
+        if ($result->num_rows > 0) {
+            $userModel->mapData($result->fetch_assoc());
         }
+
+        // Get stock activity
+        $stockActivities = $this->getStockActivityDetails($userId);
 
         // Get all roles
         $roleQuery = "SELECT rolaID, ime FROM role";
@@ -64,14 +102,19 @@ class UserController extends BaseController {
                          FROM korisnici k
                          JOIN korisnik_role kr ON k.korisnikID = kr.korisnikID
                          JOIN role r ON kr.rolaID = r.rolaID
-                         WHERE k.korisnikID = " . $_GET['id'];
-        $userRole = $userModel->executeQuery($userRoleQuery)[0] ?? null;
+                         WHERE k.korisnikID = ?";
+
+        $stmt = $userModel->con->prepare($userRoleQuery);
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $userRole = $stmt->get_result()->fetch_assoc();
 
         $viewData = [
             'model' => $userModel,
             'roles' => $roles,
             'userRole' => $userRole,
-            'isAdmin' => $this->isAdmin()
+            'isAdmin' => $this->isAdmin(),
+            'stockActivities' => $stockActivities
         ];
 
         $this->view->render('updateUser', 'main', $viewData);
