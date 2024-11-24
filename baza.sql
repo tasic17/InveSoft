@@ -47,19 +47,20 @@ CREATE TABLE IF NOT EXISTS `korisnici` (
 
 -- Dumping data for table invesoft.korisnici: ~14 rows (approximately)
 INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VALUES
-	(2, 'Ana', 'Petrović', 'ana.petrovic@invesoft.com', 'AnaPet#456'),
+	(2, 'Anabela', 'Petrović', 'anabela.petrovic@invesoft.com', 'AnaPet#456'),
 	(3, 'Marko', 'Nikolić', 'marko.nikolic@invesoft.com', 'MarkoN!789'),
-	(4, 'Ivana', 'Popović', 'ivana.popovic@invesoft.com', 'IvaPoP@321'),
+	(4, 'Ivan', 'Popović', 'ivan.popovic@invesoft.com', 'IvaPoP@321'),
 	(5, 'Jelena', 'Marković', 'jelena.markovic@invesoft.com', 'JeLeNa%654'),
 	(6, 'Stefan', 'Kovačević', 'stefan.kovacevic@invesoft.com', 'SteFaN$876'),
 	(7, 'Maja', 'Stojanović', 'maja.stojanovic@invesoft.com', 'MajA#112'),
 	(8, 'Nikola', 'Ilić', 'nikola.ilic@invesoft.com', 'NikILiC!344'),
 	(9, 'Dragana', 'Simić', 'dragana.simic@invesoft.com', 'DraSim@559'),
 	(10, 'Aleksandar', 'Pavlović', 'aleksandar.pavlovic@invesoft.com', 'AleksaP&788'),
-	(12, 'New', 'User', 'andrija@gmail.com', '$2y$10$D17gxZ051CuprTsSkeRfs.8qld5rSv9Uv851mg7hyUN4KAPv.Kwfi'),
 	(13, 'Goran', 'Suvacarev', 'goran@gmail.com', '$2y$10$bMosiRSZPlzxRCZyPPTyfujVOQH2rQ3KDlMCHAcWEc0xXNOMDAOQC'),
 	(14, 'Luka', 'Tasic', 'admin@invesoft.com', '$2y$10$cG5JgWrQL/Y6F84yekvxAelXoFkxl9PssR/X1FI.PsfdJpv05rScS'),
-	(15, 'Milos', 'Vidakovic', 'milos@gmail.com', '$2y$10$ieVASttBfxrKlvPO72hmCud8Ko.RZhORfHTgxLKY43q9ubbzWNW5W');
+	(15, 'Milos', 'Vidakovic', 'milos@gmail.com', '$2y$10$ieVASttBfxrKlvPO72hmCud8Ko.RZhORfHTgxLKY43q9ubbzWNW5W'),
+	(19, 'Zeljko', 'Grbic', 'zeljko@gmail.com', '$2y$10$2rTZoFrtJ3y5AtpK4odV3.AnLFjysjnLC6KUBMf14VYs1DGTk2W1K'),
+	(20, 'Andrija', 'Tasic', 'admin@gmail.com', '$2y$10$OmIHrWYje9o4NjBjV/Wva.kl7HcaIpf0hsaF26SRJdMA6feHk6bRG');
 
 -- Dumping structure for table invesoft.korisnik_role
 CREATE TABLE IF NOT EXISTS `korisnik_role` (
@@ -73,19 +74,20 @@ CREATE TABLE IF NOT EXISTS `korisnik_role` (
   CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnik_role: ~12 rows (approximately)
+-- Dumping data for table invesoft.korisnik_role: ~11 rows (approximately)
 INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
 	(2, 2, 2),
-	(3, 3, 1),
+	(3, 3, 2),
 	(4, 4, 2),
 	(5, 5, 2),
 	(6, 6, 2),
 	(7, 7, 2),
-	(8, 8, 1),
+	(8, 8, 2),
 	(9, 9, 2),
-	(10, 10, 1),
+	(10, 10, 2),
 	(14, 14, 1),
-	(15, 15, 2);
+	(15, 15, 2),
+	(20, 20, 1);
 
 -- Dumping structure for table invesoft.proizvodi
 CREATE TABLE IF NOT EXISTS `proizvodi` (
@@ -167,11 +169,8 @@ CREATE TABLE IF NOT EXISTS `promene_zaliha` (
   CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.promene_zaliha: ~17 rows (approximately)
+-- Dumping data for table invesoft.promene_zaliha: ~19 rows (approximately)
 INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_promene`, `tip_promene`, `kolicina`) VALUES
-	(1, 1, 12, '2024-11-23 14:03:34', 'Ulaz', 1),
-	(2, 2, 12, '2024-11-23 14:03:45', 'Izlaz', 0),
-	(3, 2, 12, '2024-11-23 14:03:58', 'Izlaz', 2),
 	(4, 1, 14, '2024-11-23 14:28:11', 'Izlaz', 1),
 	(5, 1, 14, '2024-11-23 14:40:05', 'Ulaz', 10),
 	(6, 2, 14, '2024-11-23 14:56:52', 'Ulaz', 100),
@@ -186,7 +185,12 @@ INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_pr
 	(15, 8, 14, '2024-11-24 17:32:45', 'Ulaz', 80),
 	(16, 8, 14, '2024-11-24 17:32:56', 'Izlaz', 50),
 	(17, 8, 14, '2024-11-24 17:36:35', 'Izlaz', 40),
-	(18, 1, 13, '2024-11-24 17:50:07', 'Ulaz', 10);
+	(18, 1, 13, '2024-11-24 17:50:07', 'Ulaz', 10),
+	(19, 1, 19, '2024-11-24 22:54:54', 'Ulaz', 80),
+	(20, 1, 19, '2024-11-24 22:55:04', 'Izlaz', 30),
+	(21, 1, 19, '2024-11-24 22:55:10', 'Ulaz', 50),
+	(22, 2, 15, '2024-11-24 22:58:42', 'Ulaz', 20),
+	(23, 8, 14, '2024-11-24 23:30:06', 'Ulaz', 100);
 
 -- Dumping structure for table invesoft.role
 CREATE TABLE IF NOT EXISTS `role` (
@@ -212,14 +216,14 @@ CREATE TABLE IF NOT EXISTS `zalihe` (
 
 -- Dumping data for table invesoft.zalihe: ~50 rows (approximately)
 INSERT INTO `zalihe` (`zalihaID`, `proizvodID`, `kolicina`) VALUES
-	(1, 1, 100),
-	(2, 2, 150),
+	(1, 1, 200),
+	(2, 2, 170),
 	(3, 3, 87),
 	(4, 4, 84),
 	(5, 5, 72),
 	(6, 6, 31),
 	(7, 7, 25),
-	(8, 8, 100),
+	(8, 8, 200),
 	(9, 9, 65),
 	(10, 10, 82),
 	(11, 11, 67),
