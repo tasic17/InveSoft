@@ -43,9 +43,9 @@ CREATE TABLE IF NOT EXISTS `korisnici` (
   `password` varchar(255) NOT NULL,
   PRIMARY KEY (`korisnikID`),
   UNIQUE KEY `uq_korisnici_email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnici: ~14 rows (approximately)
+-- Dumping data for table invesoft.korisnici: ~15 rows (approximately)
 INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VALUES
 	(2, 'Anabela', 'Petrović', 'anabela.petrovic@invesoft.com', 'AnaPet#456'),
 	(3, 'Marko', 'Nikolić', 'marko.nikolic@invesoft.com', 'MarkoN!789'),
@@ -60,7 +60,8 @@ INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VA
 	(14, 'Luka', 'Tasic', 'admin@invesoft.com', '$2y$10$cG5JgWrQL/Y6F84yekvxAelXoFkxl9PssR/X1FI.PsfdJpv05rScS'),
 	(15, 'Milos', 'Vidakovic', 'milos@gmail.com', '$2y$10$ieVASttBfxrKlvPO72hmCud8Ko.RZhORfHTgxLKY43q9ubbzWNW5W'),
 	(19, 'Zeljko', 'Grbic', 'zeljko@gmail.com', '$2y$10$2rTZoFrtJ3y5AtpK4odV3.AnLFjysjnLC6KUBMf14VYs1DGTk2W1K'),
-	(20, 'Andrija', 'Tasic', 'admin@gmail.com', '$2y$10$OmIHrWYje9o4NjBjV/Wva.kl7HcaIpf0hsaF26SRJdMA6feHk6bRG');
+	(20, 'Andrija', 'Tasic', 'admin@gmail.com', '$2y$10$OmIHrWYje9o4NjBjV/Wva.kl7HcaIpf0hsaF26SRJdMA6feHk6bRG'),
+	(21, 'Mita', 'Tasic', 'mita@gmail.com', '$2y$10$mzVcuhKDOe.EFm3NqEchQ.2n7kmKa2dGFPUqEWgO051n8UeW8J8PW');
 
 -- Dumping structure for table invesoft.korisnik_role
 CREATE TABLE IF NOT EXISTS `korisnik_role` (
@@ -72,9 +73,9 @@ CREATE TABLE IF NOT EXISTS `korisnik_role` (
   KEY `fk_korisnik_role_rolaID` (`rolaID`),
   CONSTRAINT `fk_korisnik_role_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
   CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnik_role: ~12 rows (approximately)
+-- Dumping data for table invesoft.korisnik_role: ~13 rows (approximately)
 INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
 	(2, 2, 2),
 	(3, 3, 2),
@@ -87,7 +88,8 @@ INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
 	(10, 10, 2),
 	(14, 14, 1),
 	(15, 15, 2),
-	(20, 20, 1);
+	(20, 20, 1),
+	(21, 21, 2);
 
 -- Dumping structure for table invesoft.proizvodi
 CREATE TABLE IF NOT EXISTS `proizvodi` (
@@ -99,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `proizvodi` (
   PRIMARY KEY (`proizvodID`),
   KEY `fk_proizvodi_kategorijaID` (`kategorijaID`),
   CONSTRAINT `fk_proizvodi_kategorijaID` FOREIGN KEY (`kategorijaID`) REFERENCES `kategorije` (`kategorijaID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.proizvodi: ~50 rows (approximately)
 INSERT INTO `proizvodi` (`proizvodID`, `naziv`, `opis`, `cena`, `kategorijaID`) VALUES
@@ -167,9 +169,9 @@ CREATE TABLE IF NOT EXISTS `promene_zaliha` (
   KEY `fk_promene_zaliha_korisnikID` (`korisnikID`),
   CONSTRAINT `fk_promene_zaliha_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
   CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=27 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.promene_zaliha: ~19 rows (approximately)
+-- Dumping data for table invesoft.promene_zaliha: ~21 rows (approximately)
 INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_promene`, `tip_promene`, `kolicina`) VALUES
 	(4, 1, 14, '2024-11-23 14:28:11', 'Izlaz', 1),
 	(5, 1, 14, '2024-11-23 14:40:05', 'Ulaz', 10),
@@ -193,7 +195,12 @@ INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_pr
 	(23, 8, 14, '2024-11-24 23:30:06', 'Ulaz', 100),
 	(24, 1, 15, '2024-11-24 23:37:01', 'Ulaz', 30),
 	(25, 8, 15, '2024-11-24 23:37:06', 'Ulaz', 30),
-	(26, 7, 15, '2024-11-24 23:37:11', 'Ulaz', 30);
+	(26, 7, 15, '2024-11-24 23:37:11', 'Ulaz', 30),
+	(27, 1, 21, '2024-11-25 11:06:01', 'Ulaz', 10),
+	(28, 1, 21, '2024-11-25 11:06:06', 'Izlaz', 10),
+	(30, 7, 21, '2024-11-25 11:21:29', 'Ulaz', 125),
+	(31, 6, 21, '2024-11-25 11:21:39', 'Ulaz', 60),
+	(32, 1, 21, '2024-11-25 11:21:49', 'Izlaz', 50);
 
 -- Dumping structure for table invesoft.role
 CREATE TABLE IF NOT EXISTS `role` (
@@ -215,17 +222,17 @@ CREATE TABLE IF NOT EXISTS `zalihe` (
   PRIMARY KEY (`zalihaID`),
   KEY `fk_zalihe_proizvodID` (`proizvodID`),
   CONSTRAINT `fk_zalihe_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=51 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.zalihe: ~50 rows (approximately)
+-- Dumping data for table invesoft.zalihe: ~49 rows (approximately)
 INSERT INTO `zalihe` (`zalihaID`, `proizvodID`, `kolicina`) VALUES
-	(1, 1, 230),
+	(1, 1, 180),
 	(2, 2, 170),
 	(3, 3, 87),
 	(4, 4, 84),
 	(5, 5, 72),
-	(6, 6, 31),
-	(7, 7, 55),
+	(6, 6, 91),
+	(7, 7, 180),
 	(8, 8, 230),
 	(9, 9, 65),
 	(10, 10, 82),
