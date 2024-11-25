@@ -39,5 +39,6 @@ $app->router->get("/inventory/history", [InventoryController::class, 'stockHisto
 $app->router->get("/inventory/stock-report", [InventoryController::class, 'stockReport']);
 $app->router->get("/inventory/search-products", [InventoryController::class, 'searchProducts']);
 $app->router->get("/inventory/product-history", [InventoryController::class, 'productHistory']);
+$app->router->get("/inventory/delete-product", [InventoryController::class, 'deleteProduct']);
 
 $app->run();

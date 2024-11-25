@@ -18,8 +18,8 @@ class InventoryController extends BaseController {
 
         // Base query
         $baseQuery = "FROM proizvodi p 
-                     JOIN kategorije k ON p.kategorijaID = k.kategorijaID
-                     JOIN zalihe z ON p.proizvodID = z.proizvodID";
+                 JOIN kategorije k ON p.kategorijaID = k.kategorijaID
+                 JOIN zalihe z ON p.proizvodID = z.proizvodID";
 
         // Add search condition if search term exists
         $searchCondition = "";
@@ -71,7 +71,8 @@ class InventoryController extends BaseController {
             'items' => $results,
             'totalPages' => $totalPages,
             'currentPage' => $page,
-            'search' => $search
+            'search' => $search,
+            'isAdmin' => $this->isAdmin() // Add this line to pass admin status to view
         ]);
     }
 
@@ -330,18 +331,28 @@ class InventoryController extends BaseController {
         $proizvodModel = new ProizvodModel();
         $zalihaModel = new ZalihaModel();
 
-        $proizvodModel->mapData($_POST);
+        // Debug POST data
+        var_dump($_POST);
+
+        $proizvodModel->mapData([
+            'naziv' => $_POST['naziv'],
+            'opis' => $_POST['opis'],
+            'cena' => $_POST['cena'],
+            'kategorijaID' => $_POST['kategorijaID']
+        ]);
 
         // Additional validation for non-negative values
         if (isset($_POST['pocetna_kolicina']) && $_POST['pocetna_kolicina'] < 0) {
             Application::$app->session->set('errorNotification', 'Početna količina ne može biti negativna!');
-            $this->view->render('inventory/addProduct', 'main', $proizvodModel);
+            $kategorije = new KategorijaModel();
+            $this->view->render('inventory/addProduct', 'main', ['kategorije' => $kategorije->all("")]);
             exit;
         }
 
         if (isset($_POST['cena']) && $_POST['cena'] < 0) {
             Application::$app->session->set('errorNotification', 'Cena ne može biti negativna!');
-            $this->view->render('inventory/addProduct', 'main', $proizvodModel);
+            $kategorije = new KategorijaModel();
+            $this->view->render('inventory/addProduct', 'main', ['kategorije' => $kategorije->all("")]);
             exit;
         }
 
@@ -349,7 +360,8 @@ class InventoryController extends BaseController {
 
         if ($proizvodModel->errors) {
             Application::$app->session->set('errorNotification', 'Greška pri dodavanju proizvoda!');
-            $this->view->render('inventory/addProduct', 'main', $proizvodModel);
+            $kategorije = new KategorijaModel();
+            $this->view->render('inventory/addProduct', 'main', ['kategorije' => $kategorije->all("")]);
             exit;
         }
 
@@ -358,7 +370,16 @@ class InventoryController extends BaseController {
 
         try {
             // Insert the product
-            if (!$proizvodModel->insert()) {
+            $query = "INSERT INTO proizvodi (naziv, opis, cena, kategorijaID) VALUES (?, ?, ?, ?)";
+            $stmt = $proizvodModel->con->prepare($query);
+            $stmt->bind_param("ssdi",
+                $proizvodModel->naziv,
+                $proizvodModel->opis,
+                $proizvodModel->cena,
+                $proizvodModel->kategorijaID
+            );
+
+            if (!$stmt->execute()) {
                 throw new \Exception("Error inserting product: " . $proizvodModel->con->error);
             }
 
@@ -366,23 +387,27 @@ class InventoryController extends BaseController {
             $proizvodID = $proizvodModel->con->insert_id;
 
             // Create initial inventory record
-            $zalihaModel->proizvodID = $proizvodID;
-            $zalihaModel->kolicina = (int)max(0, $_POST['pocetna_kolicina'] ?? 0);
+            $pocetnaKolicina = (int)max(0, $_POST['pocetna_kolicina'] ?? 0);
 
-            if (!$zalihaModel->insert()) {
-                throw new \Exception("Error inserting inventory: " . $zalihaModel->con->error);
+            $query = "INSERT INTO zalihe (proizvodID, kolicina) VALUES (?, ?)";
+            $stmt = $proizvodModel->con->prepare($query);
+            $stmt->bind_param("ii", $proizvodID, $pocetnaKolicina);
+
+            if (!$stmt->execute()) {
+                throw new \Exception("Error inserting inventory: " . $proizvodModel->con->error);
             }
 
-            // Record initial stock as a change
-            $promenaModel = new PromenaZalihaModel();
-            $promenaModel->proizvodID = $proizvodID;
-            $promenaModel->korisnikID = Application::$app->session->get('user')[0]['id'];
-            $promenaModel->datum_promene = date('Y-m-d H:i:s');
-            $promenaModel->tip_promene = 'Ulaz';
-            $promenaModel->kolicina = $zalihaModel->kolicina;
+            // Record initial stock as a change if quantity > 0
+            if ($pocetnaKolicina > 0) {
+                $query = "INSERT INTO promene_zaliha (proizvodID, korisnikID, datum_promene, tip_promene, kolicina) 
+                     VALUES (?, ?, NOW(), 'Ulaz', ?)";
+                $stmt = $proizvodModel->con->prepare($query);
+                $korisnikID = Application::$app->session->get('user')[0]['id'];
+                $stmt->bind_param("iii", $proizvodID, $korisnikID, $pocetnaKolicina);
 
-            if (!$promenaModel->insert()) {
-                throw new \Exception("Error recording initial stock: " . $promenaModel->con->error);
+                if (!$stmt->execute()) {
+                    throw new \Exception("Error recording initial stock: " . $proizvodModel->con->error);
+                }
             }
 
             // If everything is successful, commit the transaction
@@ -390,12 +415,14 @@ class InventoryController extends BaseController {
 
             Application::$app->session->set('successNotification', 'Proizvod uspešno dodat!');
             header("location:" . "/inventory");
+            exit;
         } catch (\Exception $e) {
             // If there's an error, rollback the transaction
             $proizvodModel->con->rollback();
 
             Application::$app->session->set('errorNotification', 'Greška: ' . $e->getMessage());
-            $this->view->render('inventory/addProduct', 'main', $proizvodModel);
+            $kategorije = new KategorijaModel();
+            $this->view->render('inventory/addProduct', 'main', ['kategorije' => $kategorije->all("")]);
             exit;
         }
     }
@@ -504,6 +531,55 @@ class InventoryController extends BaseController {
         }
 
         return false;
+    }
+
+    public function deleteProduct() {
+        if (!$this->isAdmin()) {
+            Application::$app->session->set('errorNotification', 'Pristup nije dozvoljen!');
+            header("location:" . "/inventory");
+            exit;
+        }
+
+        if (!isset($_GET['id'])) {
+            Application::$app->session->set('errorNotification', 'ID proizvoda nije prosleđen!');
+            header("location:" . "/inventory");
+            exit;
+        }
+
+        $proizvodID = $_GET['id'];
+        $proizvodModel = new ProizvodModel();
+
+        // Start transaction
+        $proizvodModel->con->begin_transaction();
+
+        try {
+            // First delete from promene_zaliha
+            $query = "DELETE FROM promene_zaliha WHERE proizvodID = ?";
+            $stmt = $proizvodModel->con->prepare($query);
+            $stmt->bind_param("i", $proizvodID);
+            $stmt->execute();
+
+            // Then delete from zalihe
+            $query = "DELETE FROM zalihe WHERE proizvodID = ?";
+            $stmt = $proizvodModel->con->prepare($query);
+            $stmt->bind_param("i", $proizvodID);
+            $stmt->execute();
+
+            // Finally delete from proizvodi
+            $query = "DELETE FROM proizvodi WHERE proizvodID = ?";
+            $stmt = $proizvodModel->con->prepare($query);
+            $stmt->bind_param("i", $proizvodID);
+            $stmt->execute();
+
+            $proizvodModel->con->commit();
+            Application::$app->session->set('successNotification', 'Proizvod je uspešno obrisan!');
+        } catch (\Exception $e) {
+            $proizvodModel->con->rollback();
+            Application::$app->session->set('errorNotification', 'Greška pri brisanju proizvoda: ' . $e->getMessage());
+        }
+
+        header("location:" . "/inventory");
+        exit;
     }
 
     public function accessRole(): array {

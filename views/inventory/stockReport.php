@@ -20,23 +20,41 @@ ksort($stockData);
 ?>
 
 <style>
-    .report-header {
-        background: linear-gradient(to right, #2E93fA, #4556AC);
-        color: white;
-        padding: 15px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* Chart Containers */
+    .chart-wrapper {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
 
     .chart-container {
         background: white;
         border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        margin-bottom: 2rem;
+        padding: 15px;
+        position: relative;
     }
 
+    .main-chart {
+        height: 400px;
+    }
+
+    .category-chart-container {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        height: 100%;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.3s ease;
+    }
+
+    .category-chart-container:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    }
+
+    /* Titles */
     .chart-title {
         font-size: 1.1rem;
         font-weight: 600;
@@ -47,6 +65,17 @@ ksort($stockData);
         border-bottom: 2px solid #eee;
     }
 
+    .subchart-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #344767;
+        text-align: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.25rem;
+        border-bottom: 1px solid #eee;
+    }
+
+    /* Search Container */
     .search-container {
         position: relative;
         margin-bottom: 20px;
@@ -64,31 +93,41 @@ ksort($stockData);
         z-index: 1000;
         max-height: 200px;
         overflow-y: auto;
-        display: none;
     }
 
     .search-item {
         padding: 8px 12px;
         cursor: pointer;
         border-bottom: 1px solid #eee;
+        transition: background-color 0.2s ease;
     }
 
     .search-item:hover {
-        background: #f8f9fa;
+        background-color: #f8f9fa;
     }
 
-    .chart-wrapper {
-        background: white;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    /* Responsive Adjustments */
+    @media (max-width: 992px) {
+        .main-chart {
+            height: 300px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .chart-wrapper {
+            padding: 15px;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+        }
     }
 </style>
 
 <div class="row">
     <div class="col-12">
         <div class="card">
+            <!-- Header Section -->
             <div class="card-header pb-0">
                 <div class="report-header">
                     <div class="d-flex align-items-center justify-content-between">
@@ -99,8 +138,9 @@ ksort($stockData);
                     </div>
                 </div>
             </div>
+
             <div class="card-body">
-                <!-- Product Search Section -->
+                <!-- Search Section -->
                 <div class="chart-wrapper">
                     <div class="chart-title">Analiza Proizvoda</div>
                     <div class="row">
@@ -120,31 +160,49 @@ ksort($stockData);
                     </div>
                 </div>
 
-                <!-- Stock Changes Line Chart -->
-                <div class="chart-wrapper">
-                    <div class="chart-title">Ukupne Zalihe kroz Vreme</div>
-                    <div class="chart-container" style="height: 400px;">
-                        <canvas id="stockLineChart"></canvas>
+                <!-- Inventory Overview Section -->
+                <div class="row">
+                    <!-- Total Stock Changes Chart -->
+                    <div class="col-12 mb-4">
+                        <div class="chart-wrapper">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-line me-2"></i>
+                                Ukupne Zalihe kroz Vreme
+                            </div>
+                            <div class="chart-container main-chart">
+                                <canvas id="stockLineChart"></canvas>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Main Category Distribution -->
-                <div class="chart-wrapper">
-                    <div class="chart-title">Distribucija Zaliha po Kategorijama</div>
-                    <div class="chart-container" style="height: 400px;">
-                        <canvas id="categoryPieChart"></canvas>
+                    <!-- Main Category Distribution -->
+                    <div class="col-12 mb-4">
+                        <div class="chart-wrapper">
+                            <div class="chart-title">
+                                <i class="fas fa-chart-pie me-2"></i>
+                                Distribucija Zaliha po Kategorijama
+                            </div>
+                            <div class="chart-container main-chart">
+                                <canvas id="categoryPieChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Individual Category Charts -->
                 <div class="chart-wrapper">
-                    <div class="chart-title">Distribucija Proizvoda po Kategorijama</div>
-                    <div class="row">
+                    <div class="chart-title">
+                        <i class="fas fa-boxes me-2"></i>
+                        Detaljna Distribucija po Kategorijama
+                    </div>
+                    <div class="row" style="min-height: 600px;">
                         <?php foreach ($productsByCategory as $categoryName => $data): ?>
-                            <div class="col-md-6 mb-4">
-                                <div class="chart-container" style="height: 300px;">
-                                    <div class="chart-title"><?= htmlspecialchars($categoryName) ?></div>
-                                    <canvas id="categoryChart_<?= md5($categoryName) ?>"></canvas>
+                            <div class="col-lg-6 mb-4">
+                                <div class="category-chart-container">
+                                    <div class="subchart-title"><?= htmlspecialchars($categoryName) ?></div>
+                                    <div class="chart-container" style="height: 280px;">
+                                        <canvas id="categoryChart_<?= md5($categoryName) ?>"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
