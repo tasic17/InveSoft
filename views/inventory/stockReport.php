@@ -241,6 +241,7 @@ $detailedChanges = $params['detailedChanges'];
 </div>
 
 <script>
+    // Chart color palette
     const COLORS = [
         '#2E93fA', '#66DA26', '#546E7A', '#E91E63', '#FF9800',
         '#4CAF50', '#8884d8', '#FF5722', '#9C27B0', '#3F51B5'
@@ -414,39 +415,27 @@ $detailedChanges = $params['detailedChanges'];
     });
     <?php endforeach; ?>
 
-    // Product Search and Chart Functionality
+    // Product Analysis Chart Functionality
     let productChart = null;
     let searchTimeout = null;
     let selectedProductId = null;
 
-    document.getElementById('productSearch').addEventListener('input', function(e) {
-        clearTimeout(searchTimeout);
-        const searchTerm = e.target.value;
-
-        if (searchTerm.length < 2) {
-            document.getElementById('searchResults').style.display = 'none';
+    function initProductChart() {
+        let container = document.getElementById('productChartContainer');
+        if (!container) {
+            console.error('Product chart container not found');
             return;
         }
 
-        searchTimeout = setTimeout(() => {
-            fetch(`/inventory/search-products?term=${encodeURIComponent(searchTerm)}`)
-                .then(response => response.json())
-                .then(products => {
-                    const resultsDiv = document.getElementById('searchResults');
-                    resultsDiv.innerHTML = '';
+        let canvas = document.getElementById('productChart');
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvas.id = 'productChart';
+            container.appendChild(canvas);
+        }
 
-                    products.forEach(product => {
-                        const div = document.createElement('div');
-                        div.className = 'search-item';
-                        div.textContent = product.naziv;
-                        div.onclick = () => selectProduct(product.proizvodID, product.naziv);
-                        resultsDiv.appendChild(div);
-                    });
-
-                    resultsDiv.style.display = products.length ? 'block' : 'none';
-                });
-        }, 300);
-    });
+        container.style.display = 'none';
+    }
 
     function selectProduct(productId, productName) {
         selectedProductId = productId;
@@ -466,11 +455,14 @@ $detailedChanges = $params['detailedChanges'];
             url += `&startDate=${startDate}&endDate=${endDate}`;
         }
 
+        const chartContainer = document.getElementById('productChartContainer');
+        chartContainer.style.display = 'block';
+        chartContainer.innerHTML = '<div class="text-center p-3">Učitavanje...</div>';
+
         fetch(url)
             .then(response => response.json())
             .then(data => {
-                const chartContainer = document.getElementById('productChartContainer');
-                chartContainer.style.display = 'block';
+                chartContainer.innerHTML = '<canvas id="productChart"></canvas>';
 
                 if (productChart) {
                     productChart.destroy();
@@ -540,9 +532,54 @@ $detailedChanges = $params['detailedChanges'];
                         }
                     }
                 });
+            })
+            .catch(error => {
+                console.error('Error loading product chart:', error);
+                chartContainer.innerHTML = '<div class="alert alert-danger">Greška pri učitavanju podataka</div>';
             });
     }
 
+    // Product search functionality
+    document.getElementById('productSearch').addEventListener('input', function(e) {
+        clearTimeout(searchTimeout);
+        const searchTerm = e.target.value;
+
+        if (searchTerm.length < 2) {
+            document.getElementById('searchResults').style.display = 'none';
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/inventory/search-products?term=${encodeURIComponent(searchTerm)}`)
+                .then(response => response.json())
+                .then(products => {
+                    const resultsDiv = document.getElementById('searchResults');
+                    resultsDiv.innerHTML = '';
+
+                    if (products.length === 0) {
+                        resultsDiv.innerHTML = '<div class="search-item">Nema rezultata</div>';
+                    } else {
+                        products.forEach(product => {
+                            const div = document.createElement('div');
+                            div.className = 'search-item';
+                            div.textContent = product.naziv;
+                            div.onclick = () => selectProduct(product.proizvodID, product.naziv);
+                            resultsDiv.appendChild(div);
+                        });
+                    }
+
+                    resultsDiv.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error searching products:', error);
+                    const resultsDiv = document.getElementById('searchResults');
+                    resultsDiv.innerHTML = '<div class="search-item text-danger">Greška pri pretraživanju</div>';
+                    resultsDiv.style.display = 'block';
+                });
+        }, 300);
+    });
+
+    // Stock chart date filter functionality
     function updateStockChart() {
         const startDate = document.getElementById('stockStartDate').value;
         const endDate = document.getElementById('stockEndDate').value;
@@ -566,18 +603,18 @@ $detailedChanges = $params['detailedChanges'];
             });
     }
 
-    // Event Listeners for Date Filters
+    // Event listeners and initialization
+    document.addEventListener('DOMContentLoaded', initProductChart);
     document.getElementById('productStartDate').addEventListener('change', updateProductChart);
     document.getElementById('productEndDate').addEventListener('change', updateProductChart);
 
-    // Event Listener for Clicking Outside Search Results
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.search-container')) {
             document.getElementById('searchResults').style.display = 'none';
         }
     });
 
-    // Function to Refresh All Charts
+    // Refresh all charts function
     function refreshCharts() {
         const startDate = document.getElementById('stockStartDate').value;
         const endDate = document.getElementById('stockEndDate').value;
