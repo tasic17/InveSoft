@@ -462,6 +462,11 @@ $detailedChanges = $params['detailedChanges'];
         fetch(url)
             .then(response => response.json())
             .then(data => {
+                if (!data.success) {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+
+                // Clear loading message and prepare canvas
                 chartContainer.innerHTML = '<canvas id="productChart"></canvas>';
 
                 if (productChart) {
@@ -469,6 +474,13 @@ $detailedChanges = $params['detailedChanges'];
                 }
 
                 const ctx = document.getElementById('productChart').getContext('2d');
+
+                // Check if we have data
+                if (!data.dates || !data.dates.length) {
+                    chartContainer.innerHTML = '<div class="alert alert-info">Nema podataka za izabrani period</div>';
+                    return;
+                }
+
                 productChart = new Chart(ctx, {
                     type: 'bar',
                     data: {
@@ -535,7 +547,7 @@ $detailedChanges = $params['detailedChanges'];
             })
             .catch(error => {
                 console.error('Error loading product chart:', error);
-                chartContainer.innerHTML = '<div class="alert alert-danger">Greška pri učitavanju podataka</div>';
+                chartContainer.innerHTML = '<div class="alert alert-danger">Greška pri učitavanju podataka. Pokušajte ponovo.</div>';
             });
     }
 

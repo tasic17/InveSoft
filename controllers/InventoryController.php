@@ -261,107 +261,117 @@ class InventoryController extends BaseController {
         $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
         $promenaModel = new PromenaZalihaModel();
 
-        // Base query for current stock and first transaction date
-        $query = "SELECT 
+        try {
+            // Get current stock and first transaction date
+            $query = "SELECT 
                 z.kolicina as current_stock,
                 MIN(pz.datum_promene) as first_change_date
             FROM zalihe z
             LEFT JOIN promene_zaliha pz ON z.proizvodID = pz.proizvodID
-            WHERE z.proizvodID = ?";
+            WHERE z.proizvodID = ?
+            GROUP BY z.kolicina";
 
-        $stmt = $promenaModel->con->prepare($query);
-        $stmt->bind_param("i", $productId);
-        $stmt->execute();
-        $initialInfo = $stmt->get_result()->fetch_assoc();
+            $stmt = $promenaModel->con->prepare($query);
+            $stmt->bind_param("i", $productId);
+            $stmt->execute();
+            $initialInfo = $stmt->get_result()->fetch_assoc();
 
-        // Base query for stock changes
-        $query = "SELECT 
+            // Base query for stock changes
+            $query = "SELECT 
                 DATE(datum_promene) as date,
                 tip_promene,
                 kolicina
             FROM promene_zaliha
             WHERE proizvodID = ?";
 
-        // Add date filters if provided
-        if ($startDate && $endDate) {
-            $query .= " AND DATE(datum_promene) BETWEEN ? AND ?";
-        }
-
-        $query .= " ORDER BY datum_promene, promenaID";
-
-        $stmt = $promenaModel->con->prepare($query);
-        if ($startDate && $endDate) {
-            $stmt->bind_param("iss", $productId, $startDate, $endDate);
-        } else {
-            $stmt->bind_param("i", $productId);
-        }
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        $dates = [];
-        $inflow = [];
-        $outflow = [];
-        $totalStock = [];
-
-        // Calculate initial stock by reversing all transactions
-        $allTransactions = [];
-        $runningTotal = $initialInfo['current_stock'];
-
-        while ($row = $result->fetch_assoc()) {
-            $allTransactions[] = $row;
-            if ($row['tip_promene'] === 'Ulaz') {
-                $runningTotal -= (int)$row['kolicina'];
-            } else {
-                $runningTotal += (int)$row['kolicina'];
-            }
-        }
-
-        $initialStock = $runningTotal;
-
-        // Add initial point before any changes
-        if ($initialInfo['first_change_date']) {
-            $firstChangeDate = date('Y-m-d', strtotime($initialInfo['first_change_date']));
-            $startDate = date('Y-m-d', strtotime($firstChangeDate . ' -1 day'));
-
-            $dates[] = $startDate;
-            $inflow[] = null;
-            $outflow[] = null;
-            $totalStock[] = $initialStock;
-        }
-
-        // Process all transactions
-        $runningTotal = $initialStock;
-        foreach ($allTransactions as $transaction) {
-            $dates[] = $transaction['date'];
-
-            if ($transaction['tip_promene'] === 'Ulaz') {
-                $inflow[] = (int)$transaction['kolicina'];
-                $outflow[] = null;
-                $runningTotal += (int)$transaction['kolicina'];
-            } else {
-                $inflow[] = null;
-                $outflow[] = (int)$transaction['kolicina'];
-                $runningTotal -= (int)$transaction['kolicina'];
+            // Add date filters if provided
+            $params = [$productId];
+            if ($startDate && $endDate) {
+                $query .= " AND DATE(datum_promene) BETWEEN ? AND ?";
+                $params[] = $startDate;
+                $params[] = $endDate;
             }
 
-            $totalStock[] = $runningTotal;
-        }
+            $query .= " ORDER BY datum_promene ASC";
 
-        // If there are no movements, just show current stock
-        if (empty($dates)) {
-            $dates[] = date('Y-m-d');
-            $inflow[] = null;
-            $outflow[] = null;
-            $totalStock[] = $initialInfo['current_stock'];
-        }
+            $stmt = $promenaModel->con->prepare($query);
+            if ($startDate && $endDate) {
+                $stmt->bind_param("iss", ...$params);
+            } else {
+                $stmt->bind_param("i", $productId);
+            }
+            $stmt->execute();
+            $result = $stmt->get_result();
 
-        header('Content-Type: application/json');
-        echo json_encode([
-            'dates' => $dates,
-            'inflow' => $inflow,
-            'outflow' => $outflow,
-            'totalStock' => $totalStock
-        ]);
+            $dates = [];
+            $inflow = [];
+            $outflow = [];
+            $totalStock = [];
+
+            $runningTotal = $initialInfo['current_stock'] ?? 0;
+            $allTransactions = [];
+
+            while ($row = $result->fetch_assoc()) {
+                $allTransactions[] = $row;
+                if ($row['tip_promene'] === 'Ulaz') {
+                    $runningTotal -= (int)$row['kolicina'];
+                } else {
+                    $runningTotal += (int)$row['kolicina'];
+                }
+            }
+
+            $initialStock = $runningTotal;
+            $runningTotal = $initialStock;
+
+            // Add initial point if there are transactions
+            if (!empty($allTransactions)) {
+                $firstDate = reset($allTransactions)['date'];
+                $dates[] = date('Y-m-d', strtotime($firstDate . ' -1 day'));
+                $inflow[] = 0;
+                $outflow[] = 0;
+                $totalStock[] = $initialStock;
+            }
+
+            // Process all transactions
+            foreach ($allTransactions as $transaction) {
+                $dates[] = $transaction['date'];
+
+                if ($transaction['tip_promene'] === 'Ulaz') {
+                    $inflow[] = (int)$transaction['kolicina'];
+                    $outflow[] = 0;
+                    $runningTotal += (int)$transaction['kolicina'];
+                } else {
+                    $inflow[] = 0;
+                    $outflow[] = (int)$transaction['kolicina'];
+                    $runningTotal -= (int)$transaction['kolicina'];
+                }
+
+                $totalStock[] = $runningTotal;
+            }
+
+            // If no data, show current stock
+            if (empty($dates)) {
+                $dates[] = date('Y-m-d');
+                $inflow[] = 0;
+                $outflow[] = 0;
+                $totalStock[] = $initialInfo['current_stock'] ?? 0;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'dates' => $dates,
+                'inflow' => $inflow,
+                'outflow' => $outflow,
+                'totalStock' => $totalStock,
+                'success' => true
+            ]);
+        } catch (\Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'error' => 'Error loading product data: ' . $e->getMessage(),
+                'success' => false
+            ]);
+        }
         exit;
     }
 
