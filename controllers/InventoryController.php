@@ -102,30 +102,13 @@ class InventoryController extends BaseController {
         }
 
         $stockChangesQuery .= " GROUP BY DATE(pz.datum_promene), pz.tip_promene
-        ORDER BY pz.datum_promene ASC";
+        ORDER BY date ASC, pz.tip_promene";
 
         $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
 
-        // Reorganize stock changes data for the bar chart
-        $stockData = [];
-        foreach ($stockChanges as $change) {
-            $date = $change['date'];
-            if (!isset($stockData[$date])) {
-                $stockData[$date] = [
-                    'ulaz' => 0,
-                    'izlaz' => 0
-                ];
-            }
-            if ($change['tip_promene'] === 'Ulaz') {
-                $stockData[$date]['ulaz'] = intval($change['total_kolicina']);
-            } else {
-                $stockData[$date]['izlaz'] = intval($change['total_kolicina']);
-            }
-        }
-        ksort($stockData);
-
         // Get detailed stock changes for the timeline
         $detailedStockQuery = "SELECT 
+        pz.datum_promene,
         DATE(pz.datum_promene) as date,
         p.naziv as product_name,
         pz.tip_promene,
@@ -196,6 +179,24 @@ class InventoryController extends BaseController {
             $category['data'] = array_column($combined, 'value');
         }
         unset($category);
+
+        // Reorganize stock changes data for the bar chart
+        $stockData = [];
+        foreach ($stockChanges as $change) {
+            $date = $change['date'];
+            if (!isset($stockData[$date])) {
+                $stockData[$date] = [
+                    'ulaz' => 0,
+                    'izlaz' => 0
+                ];
+            }
+            if ($change['tip_promene'] === 'Ulaz') {
+                $stockData[$date]['ulaz'] = intval($change['total_kolicina']);
+            } else {
+                $stockData[$date]['izlaz'] = intval($change['total_kolicina']);
+            }
+        }
+        ksort($stockData);
 
         // Handle AJAX requests
         if (isset($_GET['ajax'])) {
