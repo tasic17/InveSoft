@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS `korisnici` (
   UNIQUE KEY `uq_korisnici_email` (`email`)
 ) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnici: ~15 rows (approximately)
+-- Dumping data for table invesoft.korisnici: ~14 rows (approximately)
 INSERT INTO `korisnici` (`korisnikID`, `ime`, `prezime`, `email`, `password`) VALUES
 	(2, 'Anabela', 'Petrović', 'anabela.petrovic@invesoft.com', 'AnaPet#456'),
 	(3, 'Marko', 'Nikolić', 'marko.nikolic@invesoft.com', 'MarkoN!789'),
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS `korisnik_role` (
   CONSTRAINT `fk_korisnik_role_rolaID` FOREIGN KEY (`rolaID`) REFERENCES `role` (`rolaID`) ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.korisnik_role: ~13 rows (approximately)
+-- Dumping data for table invesoft.korisnik_role: ~12 rows (approximately)
 INSERT INTO `korisnik_role` (`korisnik_rolaID`, `korisnikID`, `rolaID`) VALUES
 	(2, 2, 2),
 	(3, 3, 2),
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS `proizvodi` (
   PRIMARY KEY (`proizvodID`),
   KEY `fk_proizvodi_kategorijaID` (`kategorijaID`),
   CONSTRAINT `fk_proizvodi_kategorijaID` FOREIGN KEY (`kategorijaID`) REFERENCES `kategorije` (`kategorijaID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table invesoft.proizvodi: ~50 rows (approximately)
 INSERT INTO `proizvodi` (`proizvodID`, `naziv`, `opis`, `cena`, `kategorijaID`) VALUES
@@ -169,9 +169,9 @@ CREATE TABLE IF NOT EXISTS `promene_zaliha` (
   KEY `fk_promene_zaliha_korisnikID` (`korisnikID`),
   CONSTRAINT `fk_promene_zaliha_korisnikID` FOREIGN KEY (`korisnikID`) REFERENCES `korisnici` (`korisnikID`) ON UPDATE CASCADE,
   CONSTRAINT `fk_promene_zaliha_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=33 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.promene_zaliha: ~21 rows (approximately)
+-- Dumping data for table invesoft.promene_zaliha: ~33 rows (approximately)
 INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_promene`, `tip_promene`, `kolicina`) VALUES
 	(4, 1, 14, '2024-11-23 14:28:11', 'Izlaz', 1),
 	(5, 1, 14, '2024-11-23 14:40:05', 'Ulaz', 10),
@@ -200,7 +200,12 @@ INSERT INTO `promene_zaliha` (`promenaID`, `proizvodID`, `korisnikID`, `datum_pr
 	(28, 1, 21, '2024-11-25 11:06:06', 'Izlaz', 10),
 	(30, 7, 21, '2024-11-25 11:21:29', 'Ulaz', 125),
 	(31, 6, 21, '2024-11-25 11:21:39', 'Ulaz', 60),
-	(32, 1, 21, '2024-11-25 11:21:49', 'Izlaz', 50);
+	(32, 1, 21, '2024-11-25 11:21:49', 'Izlaz', 50),
+	(34, 1, 15, '2024-11-25 19:24:06', 'Ulaz', 10),
+	(35, 9, 15, '2024-11-25 19:24:17', 'Izlaz', 15),
+	(36, 1, 14, '2024-11-26 15:40:37', 'Ulaz', 100),
+	(37, 2, 14, '2024-11-26 15:40:43', 'Ulaz', 100),
+	(38, 8, 14, '2024-11-26 15:40:51', 'Ulaz', 100);
 
 -- Dumping structure for table invesoft.role
 CREATE TABLE IF NOT EXISTS `role` (
@@ -222,19 +227,19 @@ CREATE TABLE IF NOT EXISTS `zalihe` (
   PRIMARY KEY (`zalihaID`),
   KEY `fk_zalihe_proizvodID` (`proizvodID`),
   CONSTRAINT `fk_zalihe_proizvodID` FOREIGN KEY (`proizvodID`) REFERENCES `proizvodi` (`proizvodID`) ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=54 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=55 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Dumping data for table invesoft.zalihe: ~49 rows (approximately)
+-- Dumping data for table invesoft.zalihe: ~50 rows (approximately)
 INSERT INTO `zalihe` (`zalihaID`, `proizvodID`, `kolicina`) VALUES
-	(1, 1, 180),
-	(2, 2, 170),
+	(1, 1, 290),
+	(2, 2, 270),
 	(3, 3, 87),
 	(4, 4, 84),
 	(5, 5, 72),
 	(6, 6, 91),
 	(7, 7, 180),
-	(8, 8, 230),
-	(9, 9, 65),
+	(8, 8, 330),
+	(9, 9, 50),
 	(10, 10, 82),
 	(11, 11, 67),
 	(12, 12, 32),
