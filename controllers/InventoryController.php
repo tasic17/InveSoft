@@ -85,8 +85,47 @@ class InventoryController extends BaseController {
 
         $promenaModel = new PromenaZalihaModel();
 
-        // Get stock changes over time
+        // Get date filters from request
+        $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+        $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
+
+        // Base query for stock changes with daily aggregation
         $stockChangesQuery = "SELECT 
+        DATE(pz.datum_promene) as date,
+        pz.tip_promene,
+        SUM(pz.kolicina) as total_kolicina
+    FROM promene_zaliha pz";
+
+        // Add date filters if provided
+        if ($startDate && $endDate) {
+            $stockChangesQuery .= " WHERE DATE(pz.datum_promene) BETWEEN '$startDate' AND '$endDate'";
+        }
+
+        $stockChangesQuery .= " GROUP BY DATE(pz.datum_promene), pz.tip_promene
+        ORDER BY pz.datum_promene ASC";
+
+        $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
+
+        // Reorganize stock changes data for the bar chart
+        $stockData = [];
+        foreach ($stockChanges as $change) {
+            $date = $change['date'];
+            if (!isset($stockData[$date])) {
+                $stockData[$date] = [
+                    'ulaz' => 0,
+                    'izlaz' => 0
+                ];
+            }
+            if ($change['tip_promene'] === 'Ulaz') {
+                $stockData[$date]['ulaz'] = intval($change['total_kolicina']);
+            } else {
+                $stockData[$date]['izlaz'] = intval($change['total_kolicina']);
+            }
+        }
+        ksort($stockData);
+
+        // Get detailed stock changes for the timeline
+        $detailedStockQuery = "SELECT 
         DATE(pz.datum_promene) as date,
         p.naziv as product_name,
         pz.tip_promene,
@@ -94,10 +133,15 @@ class InventoryController extends BaseController {
         k.naziv as category_name
     FROM promene_zaliha pz
     JOIN proizvodi p ON pz.proizvodID = p.proizvodID
-    JOIN kategorije k ON p.kategorijaID = k.kategorijaID
-    ORDER BY pz.datum_promene ASC";
+    JOIN kategorije k ON p.kategorijaID = k.kategorijaID";
 
-        $stockChanges = $promenaModel->executeQuery($stockChangesQuery);
+        if ($startDate && $endDate) {
+            $detailedStockQuery .= " WHERE DATE(pz.datum_promene) BETWEEN '$startDate' AND '$endDate'";
+        }
+
+        $detailedStockQuery .= " ORDER BY pz.datum_promene ASC";
+
+        $detailedChanges = $promenaModel->executeQuery($detailedStockQuery);
 
         // Get current stock by category
         $categoryStockQuery = "SELECT 
@@ -108,7 +152,7 @@ class InventoryController extends BaseController {
     JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
     JOIN zalihe z ON p.proizvodID = z.proizvodID
     GROUP BY k.kategorijaID, k.naziv
-    ORDER BY total_quantity DESC";  // Added ORDER BY for sorting
+    ORDER BY total_quantity DESC";
 
         $categoryStock = $promenaModel->executeQuery($categoryStockQuery);
 
@@ -120,11 +164,11 @@ class InventoryController extends BaseController {
     FROM kategorije k
     JOIN proizvodi p ON k.kategorijaID = p.kategorijaID
     JOIN zalihe z ON p.proizvodID = z.proizvodID
-    ORDER BY k.naziv, z.kolicina DESC";  // Modified ORDER BY to sort by quantity
+    ORDER BY k.naziv, z.kolicina DESC";
 
         $productDistribution = $promenaModel->executeQuery($productDistributionQuery);
 
-        // Process data for charts
+        // Process data for category-specific charts
         $productsByCategory = [];
         foreach ($productDistribution as $product) {
             $categoryName = $product['category_name'];
@@ -140,34 +184,35 @@ class InventoryController extends BaseController {
 
         // Sort each category's data by quantity
         foreach ($productsByCategory as &$category) {
-            // Create combined array for sorting
             $combined = array_map(function($label, $value) {
                 return ['label' => $label, 'value' => $value];
             }, $category['labels'], $category['data']);
 
-            // Sort by value (quantity) in descending order
             usort($combined, function($a, $b) {
                 return $b['value'] - $a['value'];
             });
 
-            // Separate back into labels and data
             $category['labels'] = array_column($combined, 'label');
             $category['data'] = array_column($combined, 'value');
         }
-        unset($category); // unset reference
+        unset($category);
 
+        // Handle AJAX requests
         if (isset($_GET['ajax'])) {
             header('Content-Type: application/json');
             echo json_encode([
-                'stockChanges' => $stockChanges,
+                'stockData' => $stockData,
+                'detailedChanges' => $detailedChanges,
                 'categoryStock' => $categoryStock,
                 'productDistribution' => $productDistribution
             ]);
             exit;
         }
 
+        // Render the view with all data
         $this->view->render('inventory/stockReport', 'main', [
-            'stockChanges' => $stockChanges,
+            'stockData' => $stockData,
+            'detailedChanges' => $detailedChanges,
             'categoryStock' => $categoryStock,
             'productsByCategory' => $productsByCategory
         ]);
@@ -211,9 +256,11 @@ class InventoryController extends BaseController {
         }
 
         $productId = $_GET['id'];
+        $startDate = isset($_GET['startDate']) ? $_GET['startDate'] : null;
+        $endDate = isset($_GET['endDate']) ? $_GET['endDate'] : null;
         $promenaModel = new PromenaZalihaModel();
 
-        // Get current stock and first transaction date
+        // Base query for current stock and first transaction date
         $query = "SELECT 
                 z.kolicina as current_stock,
                 MIN(pz.datum_promene) as first_change_date
@@ -226,17 +273,27 @@ class InventoryController extends BaseController {
         $stmt->execute();
         $initialInfo = $stmt->get_result()->fetch_assoc();
 
-        // Get all stock changes
+        // Base query for stock changes
         $query = "SELECT 
                 DATE(datum_promene) as date,
                 tip_promene,
                 kolicina
             FROM promene_zaliha
-            WHERE proizvodID = ?
-            ORDER BY datum_promene, promenaID";
+            WHERE proizvodID = ?";
+
+        // Add date filters if provided
+        if ($startDate && $endDate) {
+            $query .= " AND DATE(datum_promene) BETWEEN ? AND ?";
+        }
+
+        $query .= " ORDER BY datum_promene, promenaID";
 
         $stmt = $promenaModel->con->prepare($query);
-        $stmt->bind_param("i", $productId);
+        if ($startDate && $endDate) {
+            $stmt->bind_param("iss", $productId, $startDate, $endDate);
+        } else {
+            $stmt->bind_param("i", $productId);
+        }
         $stmt->execute();
         $result = $stmt->get_result();
 
@@ -247,11 +304,10 @@ class InventoryController extends BaseController {
 
         // Calculate initial stock by reversing all transactions
         $allTransactions = [];
-        $runningTotal = $initialInfo['current_stock']; // Start with current stock
+        $runningTotal = $initialInfo['current_stock'];
 
         while ($row = $result->fetch_assoc()) {
             $allTransactions[] = $row;
-            // Subtract the effect of each transaction to get to initial state
             if ($row['tip_promene'] === 'Ulaz') {
                 $runningTotal -= (int)$row['kolicina'];
             } else {
@@ -259,7 +315,7 @@ class InventoryController extends BaseController {
             }
         }
 
-        $initialStock = $runningTotal; // This is our starting point
+        $initialStock = $runningTotal;
 
         // Add initial point before any changes
         if ($initialInfo['first_change_date']) {

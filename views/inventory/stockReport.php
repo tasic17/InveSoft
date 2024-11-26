@@ -1,22 +1,8 @@
 <?php
-// views/inventory/stockReport.php
-$stockChanges = $params['stockChanges'];
+$stockData = $params['stockData'];
 $categoryStock = $params['categoryStock'];
 $productsByCategory = $params['productsByCategory'];
-
-// Process stock changes data for the line chart
-$stockData = [];
-$runningTotal = 0;
-foreach ($stockChanges as $change) {
-    $date = $change['date'];
-    if ($change['tip_promene'] === 'Ulaz') {
-        $runningTotal += intval($change['kolicina']);
-    } else {
-        $runningTotal -= intval($change['kolicina']);
-    }
-    $stockData[$date] = $runningTotal;
-}
-ksort($stockData);
+$detailedChanges = $params['detailedChanges'];
 ?>
 
 <style>
@@ -122,6 +108,16 @@ ksort($stockData);
             font-size: 1rem;
         }
     }
+    .date-filters {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .filter-button {
+        margin-top: 23px;
+    }
 </style>
 
 <div class="row">
@@ -145,13 +141,27 @@ ksort($stockData);
                     <div class="chart-title">Analiza Proizvoda</div>
                     <div class="row">
                         <div class="col-md-6 mx-auto">
-                            <div class="search-container">
+                            <div class="search-container mb-3">
                                 <input type="text"
                                        id="productSearch"
                                        class="form-control"
                                        placeholder="Pretraži proizvod..."
                                        autocomplete="off">
                                 <div id="searchResults" class="search-results"></div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Od datuma:</label>
+                                        <input type="date" id="productStartDate" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Do datuma:</label>
+                                        <input type="date" id="productEndDate" class="form-control">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -162,20 +172,37 @@ ksort($stockData);
 
                 <!-- Inventory Overview Section -->
                 <div class="row">
-                    <!-- Total Stock Changes Chart -->
+                    <!-- Total Stock Bar Chart -->
                     <div class="col-12 mb-4">
                         <div class="chart-wrapper">
                             <div class="chart-title">
-                                <i class="fas fa-chart-line me-2"></i>
+                                <i class="fas fa-chart-bar me-2"></i>
                                 Ukupne Zalihe kroz Vreme
                             </div>
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Od datuma:</label>
+                                        <input type="date" id="stockStartDate" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Do datuma:</label>
+                                        <input type="date" id="stockEndDate" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="col-md-2 d-flex align-items-end">
+                                    <button class="btn btn-primary" onclick="updateStockChart()">Primeni</button>
+                                </div>
+                            </div>
                             <div class="chart-container main-chart">
-                                <canvas id="stockLineChart"></canvas>
+                                <canvas id="stockBarChart"></canvas>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Main Category Distribution -->
+                    <!-- Category Distribution Pie Chart -->
                     <div class="col-12 mb-4">
                         <div class="chart-wrapper">
                             <div class="chart-title">
@@ -214,30 +241,42 @@ ksort($stockData);
 </div>
 
 <script>
-    // Chart color palette
     const COLORS = [
         '#2E93fA', '#66DA26', '#546E7A', '#E91E63', '#FF9800',
         '#4CAF50', '#8884d8', '#FF5722', '#9C27B0', '#3F51B5'
     ];
 
-    // Line Chart
-    const lineCtx = document.getElementById('stockLineChart').getContext('2d');
-    const stockLineChart = new Chart(lineCtx, {
-        type: 'line',
+    // Initialize the Stock Bar Chart
+    const barCtx = document.getElementById('stockBarChart').getContext('2d');
+    const stockData = <?= json_encode($stockData) ?>;
+
+    let stockBarChart = new Chart(barCtx, {
+        type: 'bar',
         data: {
-            labels: <?= json_encode(array_keys($stockData)) ?>,
+            labels: Object.keys(stockData),
             datasets: [{
-                label: 'Ukupna Količina',
-                data: <?= json_encode(array_values($stockData)) ?>,
-                borderColor: '#8884d8',
-                borderWidth: 2,
-                fill: false,
-                tension: 0.4
+                label: 'Ulaz',
+                data: Object.values(stockData).map(d => d.ulaz),
+                backgroundColor: 'rgba(102, 218, 38, 0.5)',
+                borderColor: 'rgba(102, 218, 38, 1)',
+                borderWidth: 1,
+                stack: 'stack0'
+            }, {
+                label: 'Izlaz',
+                data: Object.values(stockData).map(d => d.izlaz),
+                backgroundColor: 'rgba(233, 30, 99, 0.5)',
+                borderColor: 'rgba(233, 30, 99, 1)',
+                borderWidth: 1,
+                stack: 'stack0'
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                intersect: false,
+                mode: 'index'
+            },
             plugins: {
                 tooltip: {
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -246,10 +285,11 @@ ksort($stockData);
                     borderColor: '#ddd',
                     borderWidth: 1,
                     padding: 10,
-                    displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return `Količina: ${context.parsed.y}`;
+                            const label = context.dataset.label;
+                            const value = context.parsed.y;
+                            return `${label}: ${value}`;
                         }
                     }
                 },
@@ -275,17 +315,11 @@ ksort($stockData);
         }
     });
 
-    // Main Category Pie Chart
+    // Initialize Category Pie Chart
     const pieCtx = document.getElementById('categoryPieChart').getContext('2d');
     const categoryData = <?= json_encode($categoryStock) ?>;
-
-    // Sort the data by total_quantity in descending order
     categoryData.sort((a, b) => parseInt(b.total_quantity) - parseInt(a.total_quantity));
-
-    // Calculate total for percentages
     const totalQuantity = categoryData.reduce((sum, item) => sum + parseInt(item.total_quantity), 0);
-
-    // Add percentage to labels
     const categoryLabels = categoryData.map(item => {
         const percentage = ((parseInt(item.total_quantity) / totalQuantity) * 100).toFixed(1);
         return `${item.category_name} (${percentage}%)`;
@@ -318,7 +352,7 @@ ksort($stockData);
                             const value = context.raw;
                             const total = context.dataset.data.reduce((a, b) => a + b, 0);
                             const percentage = ((value / total) * 100).toFixed(1);
-                            return `Količina: ${value.toLocaleString()}`;
+                            return `Količina: ${value.toLocaleString()} (${percentage}%)`;
                         }
                     }
                 },
@@ -326,35 +360,14 @@ ksort($stockData);
                     position: 'right',
                     labels: {
                         boxWidth: 15,
-                        padding: 15,
-                        generateLabels: function(chart) {
-                            const data = chart.data;
-                            if (data.labels.length && data.datasets.length) {
-                                const dataset = data.datasets[0];
-                                const total = dataset.data.reduce((a, b) => a + b, 0);
-
-                                return data.labels.map((label, i) => {
-                                    const value = dataset.data[i];
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return {
-                                        text: `${label}`,
-                                        fillStyle: dataset.backgroundColor[i],
-                                        strokeStyle: dataset.borderColor,
-                                        lineWidth: dataset.borderWidth,
-                                        hidden: isNaN(dataset.data[i]) || chart.getDatasetMeta(0).data[i].hidden,
-                                        index: i
-                                    };
-                                });
-                            }
-                            return [];
-                        }
+                        padding: 15
                     }
                 }
             }
         }
     });
 
-    // Individual Category Charts
+    // Initialize Individual Category Charts
     <?php foreach ($productsByCategory as $categoryName => $data): ?>
     new Chart(document.getElementById('categoryChart_<?= md5($categoryName) ?>').getContext('2d'), {
         type: 'pie',
@@ -401,9 +414,10 @@ ksort($stockData);
     });
     <?php endforeach; ?>
 
-    // Product Search and Chart
+    // Product Search and Chart Functionality
     let productChart = null;
     let searchTimeout = null;
+    let selectedProductId = null;
 
     document.getElementById('productSearch').addEventListener('input', function(e) {
         clearTimeout(searchTimeout);
@@ -434,17 +448,25 @@ ksort($stockData);
         }, 300);
     });
 
-    document.addEventListener('click', function(e) {
-        if (!e.target.closest('.search-container')) {
-            document.getElementById('searchResults').style.display = 'none';
-        }
-    });
-
     function selectProduct(productId, productName) {
+        selectedProductId = productId;
         document.getElementById('searchResults').style.display = 'none';
         document.getElementById('productSearch').value = productName;
+        updateProductChart();
+    }
 
-        fetch(`/inventory/product-history?id=${productId}`)
+    function updateProductChart() {
+        if (!selectedProductId) return;
+
+        const startDate = document.getElementById('productStartDate').value;
+        const endDate = document.getElementById('productEndDate').value;
+        let url = `/inventory/product-history?id=${selectedProductId}`;
+
+        if (startDate && endDate) {
+            url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+
+        fetch(url)
             .then(response => response.json())
             .then(data => {
                 const chartContainer = document.getElementById('productChartContainer');
@@ -456,27 +478,27 @@ ksort($stockData);
 
                 const ctx = document.getElementById('productChart').getContext('2d');
                 productChart = new Chart(ctx, {
-                    type: 'line',
+                    type: 'bar',
                     data: {
                         labels: data.dates,
                         datasets: [{
                             label: 'Ulaz',
                             data: data.inflow,
-                            borderColor: '#66DA26',
-                            backgroundColor: '#66DA26',
-                            type: 'bar'
+                            backgroundColor: 'rgba(102, 218, 38, 0.5)',
+                            borderColor: 'rgba(102, 218, 38, 1)',
+                            borderWidth: 1
                         }, {
                             label: 'Izlaz',
                             data: data.outflow,
-                            borderColor: '#E91E63',
-                            backgroundColor: '#E91E63',
-                            type: 'bar'
+                            backgroundColor: 'rgba(233, 30, 99, 0.5)',
+                            borderColor: 'rgba(233, 30, 99, 1)',
+                            borderWidth: 1
                         }, {
                             label: 'Ukupno Stanje',
                             data: data.totalStock,
+                            type: 'line',
                             borderColor: '#2E93fA',
                             backgroundColor: 'rgba(46, 147, 250, 0.1)',
-                            type: 'line',
                             fill: true,
                             tension: 0.4
                         }]
@@ -484,10 +506,12 @@ ksort($stockData);
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
                         plugins: {
                             tooltip: {
-                                mode: 'index',
-                                intersect: false,
                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                 titleColor: '#000',
                                 bodyColor: '#000',
@@ -519,42 +543,76 @@ ksort($stockData);
             });
     }
 
-    // Function to refresh charts
-    function refreshCharts() {
-        fetch('/inventory/stock-report?ajax=1')
+    function updateStockChart() {
+        const startDate = document.getElementById('stockStartDate').value;
+        const endDate = document.getElementById('stockEndDate').value;
+
+        if (!startDate || !endDate) {
+            toastr.warning('Molimo odaberite oba datuma');
+            return;
+        }
+
+        fetch(`/inventory/stock-report?ajax=1&startDate=${startDate}&endDate=${endDate}`)
             .then(response => response.json())
             .then(data => {
-                // Process stock changes data
-                const stockData = {};
-                let runningTotal = 0;
-                data.stockChanges
-                    .sort((a, b) => new Date(a.date) - new Date(b.date))
-                    .forEach(change => {
-                        if (change.tip_promene === 'Ulaz') {
-                            runningTotal += parseInt(change.kolicina);
-                        } else {
-                            runningTotal -= parseInt(change.kolicina);
-                        }
-                        stockData[change.date] = runningTotal;
-                    });
+                stockBarChart.data.labels = Object.keys(data.stockData);
+                stockBarChart.data.datasets[0].data = Object.values(data.stockData).map(d => d.ulaz);
+                stockBarChart.data.datasets[1].data = Object.values(data.stockData).map(d => d.izlaz);
+                stockBarChart.update();
+            })
+            .catch(error => {
+                console.error('Error updating stock chart:', error);
+                toastr.error('Došlo je do greške prilikom ažuriranja grafikona');
+            });
+    }
 
-                // Update line chart
-                stockLineChart.data.labels = Object.keys(stockData);
-                stockLineChart.data.datasets[0].data = Object.values(stockData);
-                stockLineChart.update();
+    // Event Listeners for Date Filters
+    document.getElementById('productStartDate').addEventListener('change', updateProductChart);
+    document.getElementById('productEndDate').addEventListener('change', updateProductChart);
 
-                // Update main category pie chart
-                categoryPieChart.data.labels = data.categoryStock.map(item => item.category_name);
+    // Event Listener for Clicking Outside Search Results
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.search-container')) {
+            document.getElementById('searchResults').style.display = 'none';
+        }
+    });
+
+    // Function to Refresh All Charts
+    function refreshCharts() {
+        const startDate = document.getElementById('stockStartDate').value;
+        const endDate = document.getElementById('stockEndDate').value;
+        let url = '/inventory/stock-report?ajax=1';
+
+        if (startDate && endDate) {
+            url += `&startDate=${startDate}&endDate=${endDate}`;
+        }
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Update stock bar chart
+                stockBarChart.data.labels = Object.keys(data.stockData);
+                stockBarChart.data.datasets[0].data = Object.values(data.stockData).map(d => d.ulaz);
+                stockBarChart.data.datasets[1].data = Object.values(data.stockData).map(d => d.izlaz);
+                stockBarChart.update();
+
+                // Update category pie chart
+                categoryPieChart.data.labels = data.categoryStock.map(item => {
+                    const total = data.categoryStock.reduce((sum, cat) => sum + parseInt(cat.total_quantity), 0);
+                    const percentage = ((parseInt(item.total_quantity) / total) * 100).toFixed(1);
+                    return `${item.category_name} (${percentage}%)`;
+                });
                 categoryPieChart.data.datasets[0].data = data.categoryStock.map(item => item.total_quantity);
                 categoryPieChart.update();
 
-                // Reload the page to update individual category charts
-                // This ensures all category charts are properly updated with new data
-                window.location.reload();
+                // Update product chart if a product is selected
+                if (selectedProductId) {
+                    updateProductChart();
+                }
             })
             .catch(error => {
                 console.error('Error refreshing charts:', error);
-                toastr.error('Došlo je do greške prilikom osvežavanja podataka.');
+                toastr.error('Došlo je do greške prilikom osvežavanja podataka');
             });
     }
 
